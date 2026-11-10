@@ -52,3 +52,18 @@ npm run test:e2e
 - Полные уведомления: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt). Перенос: [docs/PROVENANCE.md](docs/PROVENANCE.md).
 - Campaign/daily/cloud/leaderboard/shop/rotate отсутствуют. RNG после reload не воспроизводит будущую выдачу детерминированно.
 - Это отдельный проект в ветке `mvp/platform`. GitHub push, PR и публикация в Яндекс Играх не выполнялись.
+
+## GitHub Pages (тестовая версия)
+
+В репозитории `whil3true/block_workshop` CI проверяет Node 22, unit/regression,
+production build и Chromium E2E. Только **успешный push в `dev`** инициирует
+GitHub Pages deployment. `main` не используется для публикации preview.
+
+1. GitHub → Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+2. Actions → **Quality gates and Pages preview** → проверить `verify` и `deploy-pages`.
+3. Тестовый адрес: https://whil3true.github.io/block_workshop/
+
+Относительный `base: './'` в Vite оставляет пути ассетов совместимыми с project Pages.
+`whil3true.github.io` в standalone allowlist: здесь нет настоящих рекламных показов
+и rewarded не выдаётся автоматически. Это не замена проверки Yandex draft.
+Проверь звук и touch на реальном Android; отдельно проверь SDK-callbacks на Яндекс Играх.
