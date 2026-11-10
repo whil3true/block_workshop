@@ -1,5 +1,5 @@
 [hidden] { display: none !important; }
-button { font: inherit; cursor: pointer; color: var(--color-text); background: var(--color-board); border: 1px solid #64748b; border-radius: 8px; padding: 10px 14px; min-height: 44px; }
+button { touch-action: manipulation; font: inherit; cursor: pointer; color: var(--color-text); background: var(--color-board); border: 1px solid #64748b; border-radius: 8px; padding: 10px 14px; min-height: 44px; }
 button:disabled { opacity: .45; cursor: default; }
 button:focus-visible, input:focus-visible { outline: 3px solid #38bdf8; outline-offset: 3px; }
 #boot, .welcome, .modal, .navigation-cover, .pause-cover { position: fixed; inset: 0; box-sizing: border-box; display: grid; place-content: center; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
