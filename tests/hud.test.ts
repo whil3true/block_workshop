@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHud, renderScore, renderBestScore, renderMute } from '../src/hud';
+import { createHud, renderScore, renderBestScore } from '../src/hud';
 
 describe('createHud()', () => {
   it('returns an HTMLElement with class "hud"', () => {
@@ -74,32 +74,10 @@ describe('renderBestScore()', () => {
   });
 });
 
-describe('createHud() — mute button', () => {
-  it('exposes a .hud__mute button with default label "Mute"', () => {
+describe('createHud() — audio controls', () => {
+  it('does not duplicate the global Mute control', () => {
     const hud = createHud();
-    const button = hud.querySelector<HTMLButtonElement>('.hud__mute');
-    expect(button).not.toBeNull();
-    expect(button?.tagName).toBe('BUTTON');
-    expect(button?.textContent).toBe('Mute');
-    expect(button?.getAttribute('aria-label')).toBe('Mute audio');
-  });
-});
-
-describe('renderMute()', () => {
-  it('shows "Unmute" and aria-label "Unmute audio" when muted=true', () => {
-    const hud = createHud();
-    renderMute(hud, true);
-    const button = hud.querySelector<HTMLButtonElement>('.hud__mute');
-    expect(button?.textContent).toBe('Unmute');
-    expect(button?.getAttribute('aria-label')).toBe('Unmute audio');
-  });
-
-  it('shows "Mute" and aria-label "Mute audio" when muted=false', () => {
-    const hud = createHud();
-    renderMute(hud, true);
-    renderMute(hud, false);
-    const button = hud.querySelector<HTMLButtonElement>('.hud__mute');
-    expect(button?.textContent).toBe('Mute');
-    expect(button?.getAttribute('aria-label')).toBe('Mute audio');
+    expect(hud.querySelector('.hud__mute')).toBeNull();
+    expect(hud.querySelectorAll('.hud__pair')).toHaveLength(2);
   });
 });

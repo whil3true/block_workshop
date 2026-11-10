@@ -36,6 +36,8 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
  const detachAudio = attachBrowserAudioLifecycle(manager);
  let muted = false;
  const audio = gameAudio(manager, value => { muted = value; manager.setAdActive(value || gate.paused); });
+ // The legacy global-mute control is retired; keep saved music/effects volumes.
+ audio.setMuted(false);
  let game: GameApi | undefined;
  let drag: DragApi | undefined;
  let flow: AdFlow<TrayOffer> | undefined;
@@ -58,16 +60,18 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
   try { localStorage.setItem('block-workshop:tutorial-seen', 'true'); } catch { /* session works */ }
   sync();
  });
- const welcomeLang = button('language', () => { locale.set(locale.locale === 'ru' ? 'en' : 'ru'); });
+ const welcomeSettings = button('settings', () => settings());
  try { rules.hidden = localStorage.getItem('block-workshop:tutorial-seen') === 'true'; } catch { /* show tutorial */ }
- start.append(brand, rules, play, welcomeLang);
+ start.append(brand, rules, play, welcomeSettings);
  game = createGame({ audio, canInteract: () => !gate.paused, onRestart: () => confirmRestart(), onChange: () => sync() });
  game.mount(app);
  if (game.score > 0) play.dataset['word'] = 'resume';
  const hud = app.querySelector<HTMLElement>('.hud')!;
  const top = document.createElement('div'); top.className = 'appbar';
  const name = document.createElement('strong'); name.dataset['word'] = 'title';
- top.append(name, button('settings', () => settings())); hud.prepend(top);
+ const controls = document.createElement('div'); controls.className = 'appbar__controls';
+ controls.append(button('settings', () => settings()), button('menu', () => returnToMenu()));
+ top.append(name, controls); hud.prepend(top);
  const actions = document.createElement('div'); actions.className = 'actions';
  const restartButton = button('newGame', () => confirmRestart());
  const rewardButton = button('reward', () => confirmReward());
@@ -76,6 +80,7 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
  if (platform.id === 'web') label.dataset['word'] = 'standalone';
  hud.append(label);
  const overReward = button('reward', () => confirmReward()); app.querySelector('.overlay')!.append(overReward);
+ const overMenu = button('menu', () => returnToMenu()); app.querySelector('.overlay')!.append(overMenu);
  app.append(start, paused, cover);
  const binder = createViewportBinder({ layout: computeAppLayout, appEl: app, root: document.documentElement, measure: createDomMeasure({ appEl: app, hudEl: hud, root: document.documentElement }) });
  drag = createDrag(game, app.querySelector('.tray')!, app.querySelector('.board')!, audio, () => !gate.paused);
@@ -95,7 +100,6 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
   for (const el of app.querySelectorAll<HTMLElement>('[data-word]')) el.textContent = locale.t(el.dataset['word'] as Word);
   const current = hud.querySelector('.hud__pair--current .hud__label'); if (current) current.textContent = locale.t('score');
   const best = hud.querySelector('.hud__pair--best .hud__label'); if (best) best.textContent = locale.t('best');
-  const mute = hud.querySelector('.hud__mute'); if (mute) { mute.textContent = locale.t(audio.isMuted() ? 'unmute' : 'mute'); mute.setAttribute('aria-label', mute.textContent); }
   const heading = app.querySelector('.overlay__heading'); if (heading) heading.textContent = locale.t('gameOver');
   const reset = app.querySelector('.overlay__button'); if (reset) reset.textContent = locale.t('newGame');
   paused.textContent = locale.t('paused');
@@ -122,11 +126,21 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
    action();
   }); return b;
  }
+ function returnToMenu(): void {
+  if (!started || gate.paused || flow?.busy) return;
+  started = false;
+  gate.set('startup', true);
+  start.hidden = false;
+  play.dataset['word'] = game && game.score > 0 && !game.gameOver ? 'resume' : 'play';
+  translate(); sync(); play.focus();
+ }
  function closeModal(): void {
   modal?.remove(); modal = null; gate.set('manual', false); previousFocus?.focus(); previousFocus = null;
  }
  function openModal(title: Word): HTMLElement | null {
-  if (gate.paused || flow?.busy) return null;
+  // The menu is intentionally paused by startup; its Settings must still open.
+  const menuOnly = !started && gate.has('startup') && !gate.has('manual') && !gate.has('sdk') && !gate.has('browser') && !gate.has('ad') && !gate.has('transition');
+  if ((gate.paused && !menuOnly) || flow?.busy) return null;
   previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   gate.set('manual', true);
   modal = document.createElement('section'); modal.className = 'modal'; modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true');

@@ -10,7 +10,7 @@ import {
 import { CATALOG, findPieceById, sampleTray, type Piece } from './pieces';
 import { createBoard, renderBoardState } from './board';
 import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
-import { createHud, renderBestScore, renderMute, renderScore } from './hud';
+import { createHud, renderBestScore, renderScore } from './hud';
 import { createOverlay, renderOverlay } from './overlay';
 import { createSilentAudio, type AudioApi } from './audio';
 import {
@@ -151,7 +151,6 @@ export function createGame(options: GameOptions = {}): GameApi {
   function render(): void {
     renderScore(hudEl, score);
     renderBestScore(hudEl, bestScore);
-    renderMute(hudEl, audio.isMuted());
     renderBoardState(boardEl, board);
     const slots = trayEl.querySelectorAll<HTMLElement>('.tray__slot');
     for (let i = 0; i < slots.length; i++) {
@@ -199,15 +198,6 @@ export function createGame(options: GameOptions = {}): GameApi {
     newGameButton.addEventListener('click', () => {
       if (options.canInteract && !options.canInteract()) return;
       if (options.onRestart) options.onRestart(); else newGame();
-    });
-  }
-
-  const muteButton = hudEl.querySelector<HTMLButtonElement>('.hud__mute');
-  if (muteButton) {
-    muteButton.addEventListener('click', () => {
-      if (options.canInteract && !options.canInteract()) return;
-      audio.setMuted(!audio.isMuted());
-      render();
     });
   }
 
