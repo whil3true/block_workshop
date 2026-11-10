@@ -52,6 +52,31 @@ describe('DOM application lifecycle',()=>{
   start();expect(app.gate.paused).toBe(false);expect(app.game.boardState).toEqual(before);
   expect(app.game.score).toBe(score);expect(marker).toHaveBeenLastCalledWith(true);
  });
+ it('starts a fresh game after a finished saved session instead of reopening Game Over',async()=>{
+  html();
+  localStorage.setItem('block-workshop:lastGame',JSON.stringify({
+   app:'block-workshop',schemaVersion:1,rulesVersion:1,
+   state:{
+    board:Array.from({length:10},()=>Array(10).fill('sq2')),
+    trayIds:['single','single','single'],score:75,streak:0,rewardUsed:false,
+   },
+  }));
+  app=mountApplication(new WebPlatform('en'),async()=>{});await settle();
+  expect(app.game.gameOver).toBe(true);
+  expect(document.querySelector<HTMLElement>('.overlay')?.dataset['visible']).toBe('true');
+  expect(document.querySelector('.welcome [data-word="resume"]')).toBeNull();
+  start();
+  expect(app.game.gameOver).toBe(false);
+  expect(app.game.score).toBe(0);
+  expect(app.game.boardState.every(row=>row.every(cell=>cell===null))).toBe(true);
+  expect(document.querySelector<HTMLElement>('.overlay')?.dataset['visible']).toBe('false');
+  expect(document.querySelector<HTMLElement>('.welcome')?.hidden).toBe(true);
+  document.querySelector<HTMLButtonElement>('.appbar [data-word="menu"]')!.click();
+  expect(document.querySelector<HTMLElement>('.welcome')?.hidden).toBe(false);
+  start();
+  expect(app.game.gameOver).toBe(false);
+  expect(document.querySelector<HTMLElement>('.overlay')?.dataset['visible']).toBe('false');
+ });
  it.each(['resize','orientationchange'])('%s cancels drag without consuming a piece',async event=>{
   html();app=mountApplication(new WebPlatform('en'),async()=>{});await settle();start();const ids=app.game.trayPieces.map(p=>p?.id);
   document.querySelector('.tray__slot')!.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1}));window.dispatchEvent(new Event(event));expect(document.querySelector('.ghost')).toBeNull();expect(app.game.trayPieces.map(p=>p?.id)).toEqual(ids);

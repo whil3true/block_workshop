@@ -16,6 +16,9 @@ body {
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   overscroll-behavior: none;
+  /* Prevent double-tap zoom without disabling deliberate pinch-to-zoom.
+   * The board and tray below still use touch-action:none for dragging. */
+  touch-action: manipulation;
 }
 
 /* The browser must not scroll/zoom/select while a pointer is down on a play

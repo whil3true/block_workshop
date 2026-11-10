@@ -56,6 +56,9 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
  const rules = document.createElement('p'); rules.dataset['word'] = 'rules';
  const play = button('play', () => {
   if (gate.has('sdk') || gate.has('browser') || !ready) return;
+  // A finished session cannot be continued. Start a fresh, playable board
+  // before uncovering the game-over overlay. An unfinished game is preserved.
+  if (game?.gameOver) game.commitRestart();
   audio.unlock(); started = true; start.hidden = true; gate.set('startup', false);
   try { localStorage.setItem('block-workshop:tutorial-seen', 'true'); } catch { /* session works */ }
   sync();
@@ -65,7 +68,7 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
  start.append(brand, rules, play, welcomeSettings);
  game = createGame({ audio, canInteract: () => !gate.paused, onRestart: () => confirmRestart(), onChange: () => sync() });
  game.mount(app);
- if (game.score > 0) play.dataset['word'] = 'resume';
+ if (game.score > 0 && !game.gameOver) play.dataset['word'] = 'resume';
  const hud = app.querySelector<HTMLElement>('.hud')!;
  const top = document.createElement('div'); top.className = 'appbar';
  const name = document.createElement('strong'); name.dataset['word'] = 'title';
