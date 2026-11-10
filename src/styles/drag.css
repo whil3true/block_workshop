@@ -1,5 +1,6 @@
 .ghost {
-  position: absolute;
+  /* The drag preview is viewport-relative and cannot expand page scrollWidth. */
+  position: fixed;
   top: 0;
   left: 0;
   pointer-events: none;

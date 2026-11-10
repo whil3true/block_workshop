@@ -4,7 +4,10 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: -apple-system, ui-sans-serif, system-ui, sans-serif;
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 
   /* Touch hygiene: the game is a drag surface, not a document. Stop iOS
    * Safari from treating a press-hold as a text selection (which raises the
@@ -17,7 +20,6 @@ body {
 
 /* The browser must not scroll/zoom/select while a pointer is down on a play
  * surface — the drag layer owns those gestures. */
-#app,
 .board,
 .tray,
 .ghost {
@@ -25,12 +27,22 @@ body {
 }
 
 body {
+  /* The play surface stays fixed while pieces are dragged beyond its edges. */
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  overflow: hidden;
   display: grid;
   place-items: center;
 }
 
 #app {
   display: grid;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: clip;
   gap: var(--screen-pad);
   place-items: center;
   box-sizing: border-box;

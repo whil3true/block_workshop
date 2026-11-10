@@ -15,6 +15,6 @@ test('production placement, snapshot reload and deliberate restart',async({page}
  await expect(page.locator('.hud__pair--current .hud__score')).toHaveText('1');await page.reload();await page.getByRole('button',{name:'Continue',exact:true}).click();
  await expect(page.locator('.hud__pair--current .hud__score')).toHaveText('1');
  await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:'RU',exact:true}).click();await expect(page.locator('html')).toHaveAttribute('lang','ru');
- await page.getByRole('button',{name:'Вернуться в игру',exact:true}).click();await page.getByRole('button',{name:'Новая игра',exact:true}).click();await page.getByRole('button',{name:'Продолжить',exact:true}).click();
+ await page.getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:'Новая игра',exact:true}).click();await page.getByRole('button',{name:'Продолжить',exact:true}).click();
  await expect(page.locator('.hud__pair--current .hud__score')).toHaveText('0');expect(errors).toEqual([]);
 });

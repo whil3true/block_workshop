@@ -26,6 +26,32 @@ describe('DOM application lifecycle',()=>{
   const ru=Array.from(document.querySelectorAll<HTMLButtonElement>('.modal button')).find(b=>b.textContent==='RU')!;ru.click();expect(document.documentElement.lang).toBe('ru');expect(document.title).toBe('Мастерская блоков');expect(app.game.score).toBe(score);
   document.querySelector<HTMLButtonElement>('.modal [data-word="close"]')!.click();expect(app.gate.paused).toBe(false);
  });
+ it('opens Settings from the main menu without immediately toggling locale', async()=>{
+  html();app=mountApplication(new WebPlatform('en'),async()=>{});await settle();
+  const before=document.documentElement.lang;
+  expect(document.querySelector('.welcome [data-word="language"]')).toBeNull();
+  document.querySelector<HTMLButtonElement>('.welcome [data-word="settings"]')!.click();
+  expect(app.gate.has('startup')).toBe(true);expect(app.gate.has('manual')).toBe(true);
+  expect(document.querySelectorAll('.modal input[type="range"]')).toHaveLength(2);
+  expect(document.documentElement.lang).toBe(before);
+  document.querySelector<HTMLButtonElement>('.modal [data-word="close"]')!.click();
+  expect(app.gate.has('startup')).toBe(true);expect(app.gate.has('manual')).toBe(false);
+  start();expect(app.gate.paused).toBe(false);
+ });
+ it('Menu preserves the board and removes duplicate Mute controls',async()=>{
+  html();localStorage.setItem('block-workshop:mute','true');
+  const platform=new WebPlatform('en');const marker=vi.spyOn(platform,'setGameplayActive');
+  app=mountApplication(platform,async()=>{});await settle();start();
+  expect(localStorage.getItem('block-workshop:mute')).toBe('false');
+  expect(document.querySelector('.hud__mute')).toBeNull();
+  app.game.place(0,0,0);const before=app.game.boardState.map(row=>row.slice());const score=app.game.score;
+  document.querySelector<HTMLButtonElement>('.appbar [data-word="menu"]')!.click();
+  expect(app.gate.has('startup')).toBe(true);
+  expect(document.querySelector<HTMLElement>('.welcome')!.hidden).toBe(false);
+  expect(marker).toHaveBeenLastCalledWith(false);expect(app.game.score).toBe(score);
+  start();expect(app.gate.paused).toBe(false);expect(app.game.boardState).toEqual(before);
+  expect(app.game.score).toBe(score);expect(marker).toHaveBeenLastCalledWith(true);
+ });
  it.each(['resize','orientationchange'])('%s cancels drag without consuming a piece',async event=>{
   html();app=mountApplication(new WebPlatform('en'),async()=>{});await settle();start();const ids=app.game.trayPieces.map(p=>p?.id);
   document.querySelector('.tray__slot')!.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1}));window.dispatchEvent(new Event(event));expect(document.querySelector('.ghost')).toBeNull();expect(app.game.trayPieces.map(p=>p?.id)).toEqual(ids);
