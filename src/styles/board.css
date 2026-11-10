@@ -1,0 +1,131 @@
+html,
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: -apple-system, ui-sans-serif, system-ui, sans-serif;
+  min-height: 100vh;
+
+  /* Touch hygiene: the game is a drag surface, not a document. Stop iOS
+   * Safari from treating a press-hold as a text selection (which raises the
+   * loupe, shifts the effective touch point, and leaves a selection range). */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  overscroll-behavior: none;
+}
+
+/* The browser must not scroll/zoom/select while a pointer is down on a play
+ * surface — the drag layer owns those gestures. */
+#app,
+.board,
+.tray,
+.ghost {
+  touch-action: none;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+#app {
+  display: grid;
+  gap: var(--screen-pad);
+  place-items: center;
+  box-sizing: border-box;
+  padding-top: max(var(--screen-pad), env(safe-area-inset-top));
+  padding-right: max(var(--screen-pad), env(safe-area-inset-right));
+  padding-bottom: max(var(--screen-pad), env(safe-area-inset-bottom));
+  padding-left: max(var(--screen-pad), env(safe-area-inset-left));
+}
+
+/* Aspect-switched layout (SPEC §8.7). The binder sets data-orientation; the
+ * in-flow children are exactly .hud/.board/.tray (overlay + combo are fixed). */
+#app[data-orientation='portrait'] {
+  grid-template-areas: 'hud' 'board' 'tray';
+  grid-template-columns: min-content;
+}
+
+#app[data-orientation='landscape'] {
+  grid-template-areas: 'board hud' 'board tray';
+  grid-template-columns: min-content min-content;
+  grid-template-rows: min-content min-content;
+  align-items: center;
+}
+
+.hud {
+  grid-area: hud;
+}
+
+.tray {
+  grid-area: tray;
+}
+
+/* Portrait: the tray spans the board's width (SPEC §8.7) so its three 1fr
+ * slots are wide and the pieces are evenly, generously spaced. Pinned to the
+ * binder-derived --board-size as an explicit length — never the #app grid's
+ * intrinsic min-content, which WebKit fails to recompute on an
+ * orientation round-trip (the tray collapsed to the pieces' width). */
+#app[data-orientation='portrait'] .tray,
+#app[data-orientation='portrait'] .hud {
+  width: var(--board-size);
+  box-sizing: border-box;
+}
+
+/* In landscape the tray is a vertical 3-slot stack in the side panel, so its
+ * width stays ≈ one --tray-slot-size (matching computeLayout's panel model). */
+#app[data-orientation='landscape'] .tray {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(3, auto);
+}
+
+.board {
+  grid-area: board;
+  display: grid;
+  grid-template-columns: repeat(10, var(--cell-size));
+  grid-template-rows: repeat(10, var(--cell-size));
+  gap: var(--cell-gap);
+  padding: var(--board-pad);
+  background: var(--color-board);
+  border-radius: var(--radius);
+}
+
+.board__cell {
+  background: var(--color-cell-empty);
+  border-radius: var(--radius);
+  transform-origin: center;
+}
+
+.board__cell[data-state='filled'] {
+  background: var(--piece-color);
+  animation: cellAppear var(--anim-duration) var(--anim-easing) both;
+}
+
+@keyframes cellAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.board__cell[data-state='preview-ok'] {
+  background: var(--color-preview-ok);
+}
+
+.board__cell[data-state='preview-bad'] {
+  background: var(--color-preview-bad);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}

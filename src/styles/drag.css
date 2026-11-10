@@ -1,0 +1,22 @@
+.ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: var(--z-ghost);
+  display: grid;
+  grid-template-columns: repeat(var(--bbox-w), var(--cell-size));
+  grid-template-rows: repeat(var(--bbox-h), var(--cell-size));
+  gap: var(--cell-gap);
+  opacity: var(--ghost-opacity);
+  will-change: transform;
+}
+
+.ghost__cell {
+  background: var(--piece-color);
+  border-radius: var(--radius);
+}
+
+.tray__slot[data-picked='true'] .tray__piece {
+  opacity: 0;
+}

@@ -1,0 +1,20 @@
+{
+  "baselineNode": "24.22.1",
+  "finalNodes": [
+    "22.23.4",
+    "24.22.1"
+  ],
+  "npm": "11.9.0",
+  "typescript": "5.9.3",
+  "vite": "6.4.2",
+  "vitest": "2.1.9",
+  "playwright": "1.60.0",
+  "baselineTests": 379,
+  "activeBaselineTests": 335,
+  "finalTests": 425,
+  "runtimeDependencies": 0,
+  "android": "NOT RUN",
+  "yandexDraft": "NOT RUN",
+  "localHeadlessChromium": "BLOCKED: socket() failed: Operation not permitted",
+  "sharedDesktopChrome": "PASS: real UI interactions"
+}

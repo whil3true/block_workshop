@@ -1,0 +1,40 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> blockly@0.0.0 test:run
+> vitest run
+
+
+ RUN  v2.1.9 /workspace/scratch/53011716b6d6/upstream-10block
+
+ ✓ tests/audio.test.ts (16 tests) 97ms
+ ✓ tests/engine.test.ts (58 tests) 227ms
+ ✓ tests/storage.test.ts (17 tests) 45ms
+ ✓ tests/pieces.test.ts (74 tests) 162ms
+ ✓ tests/layout.test.ts (20 tests) 100ms
+ ✓ tests/board.test.ts (33 tests) 772ms
+ ✓ tests/viewport.test.ts (6 tests) 136ms
+ ✓ tests/hud.test.ts (12 tests) 155ms
+ ✓ tests/game.test.ts (46 tests) 5809ms
+   ✓ Game — persistence > skips resume when an explicit initialBoard is provided 2275ms
+   ✓ Game — audio events > plays "combo" on a simultaneous row+column clear 365ms
+ ✓ tests/tray.test.ts (8 tests) 178ms
+ ✓ tests/drag.test.ts (34 tests) 6247ms
+   ✓ createDrag — pickup > creates a ghost and marks the slot when grabbing a filled slot 512ms
+   ✓ createDrag — preview > shows preview-bad when canPlace returns false 1729ms
+   ✓ createDrag — preview > only previews in-bounds cells near the edge 740ms
+   ✓ createDrag — preview > clears preview when the pointer moves off-board 562ms
+ ✓ tests/sample-piece.test.ts (11 tests) 650ms
+   ✓ samplePieceWeighted(rng) > only returns pieces in CATALOG 505ms
+ ✓ tests/pwa.test.ts (14 tests) 12ms
+ ✓ tests/start-gate.test.ts (6 tests) 398ms
+ ✓ tests/overlay.test.ts (6 tests) 105ms
+ ✓ tests/tokens.test.ts (6 tests) 109ms
+ ✓ tests/combo.test.ts (4 tests) 22ms
+ ✓ tests/version.test.ts (5 tests) 29ms
+ ✓ tests/page-mount.test.ts (3 tests) 568ms
+
+ Test Files  19 passed (19)
+      Tests  379 passed (379)
+   Start at  13:41:13
+   Duration  19.07s (transform 3.15s, setup 1.66s, collect 4.11s, tests 15.82s, environment 69.11s, prepare 14.61s)
+

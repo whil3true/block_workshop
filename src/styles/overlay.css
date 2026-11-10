@@ -1,0 +1,43 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: grid;
+  grid-auto-flow: row;
+  place-items: center;
+  align-content: center;
+  gap: var(--screen-pad);
+  background: var(--color-overlay-backdrop);
+  color: var(--color-text);
+  transition: opacity var(--anim-duration) var(--anim-easing);
+}
+
+.overlay[data-visible='false'] {
+  display: none;
+}
+
+.overlay__heading {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.overlay__score {
+  font-size: 40px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.overlay__button {
+  font-size: 16px;
+  font-family: inherit;
+  font-weight: 600;
+  padding: var(--cell-gap) var(--screen-pad);
+  background: var(--color-piece-line);
+  color: var(--color-bg);
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}

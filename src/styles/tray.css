@@ -1,0 +1,26 @@
+.tray {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--cell-gap);
+  padding: var(--board-pad);
+  background: var(--color-board);
+  border-radius: var(--radius);
+}
+
+.tray__slot {
+  min-height: var(--tray-slot-size);
+  display: grid;
+  place-items: center;
+}
+
+.tray__piece {
+  display: grid;
+  grid-template-columns: repeat(var(--bbox-w), var(--tray-cell-size));
+  grid-template-rows: repeat(var(--bbox-h), var(--tray-cell-size));
+  gap: var(--cell-gap);
+}
+
+.tray__piece-cell {
+  background: var(--piece-color);
+  border-radius: var(--radius);
+}

@@ -1,0 +1,62 @@
+:root {
+  /* layout — static spacing tokens (orientation-independent) */
+  --cell-gap: 2px;
+  --board-pad: 6px;
+  --screen-pad: 12px;
+  --radius: 6px;
+  --min-cell: 28px;
+  --tray-scale: 0.5;
+
+  /* Runtime-derived by the viewport binder (src/viewport.ts), written onto
+   * :root before first paint. The values here are first-paint fallbacks only
+   * (SPEC §8.3). --cell-size stays 64 to match CELL_SIZE_FALLBACK in drag.ts. */
+  --cell-size: 64px;
+  --board-size: 670px;
+  --tray-cell-size: 28px;
+  --tray-slot-size: 168px;
+
+  /* motion */
+  --anim-duration: 180ms;
+  --anim-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Modern Dark palette — surfaces */
+  --color-bg:         #0F172A;
+  --color-board:      #1E293B;
+  --color-cell-empty: #334155;
+  --color-text:       #F1F5F9;
+
+  /* Modern Dark palette — piece families */
+  --color-piece-single: #38BDF8; /* sky    — Single */
+  --color-piece-line:   #4ADE80; /* green  — all line pieces */
+  --color-piece-sq2:    #F97316; /* orange — 2×2 square */
+  --color-piece-sq3:    #A78BFA; /* violet — 3×3 square */
+  --color-piece-l2:     #FACC15; /* yellow — small L corners */
+  --color-piece-l3:     #F472B6; /* pink   — big L corners */
+
+  /* Modern Dark palette — Tetris / Block Blast families (iteration 30) */
+  --color-piece-tetro-t:  #9333EA; /* purple — T-tetromino */
+  --color-piece-tetro-l:  #D97706; /* amber  — L-tetromino */
+  --color-piece-tetro-j:  #2563EB; /* blue   — J-tetromino (L mirror) */
+  --color-piece-tetro-s:  #16A34A; /* green  — S-tetromino */
+  --color-piece-tetro-z:  #EF4444; /* red    — Z-tetromino (S mirror) */
+  --color-piece-rect-23:  #14B8A6; /* teal   — 2×3 rectangle */
+
+  /* preview states */
+  --color-preview-ok:  rgba(74, 222, 128, 0.35);
+  --color-preview-bad: rgba(244, 63, 94, 0.35);
+
+  /* drag layer */
+  --z-ghost: 1000;
+  --ghost-opacity: 0.85;
+
+  /* overlay layer */
+  --z-overlay: 900;
+  --color-overlay-backdrop: rgba(15, 23, 42, 0.85);
+
+  /* start gate — must sit above everything at first paint */
+  --z-start-gate: 1100;
+
+  /* version badge — above the start gate so the build is identifiable
+   * even before the gate is dismissed */
+  --z-version: 1200;
+}

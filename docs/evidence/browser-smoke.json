@@ -1,0 +1,9 @@
+{
+  "platform": "shared Linux Chrome",
+  "viewport": {"width": 1363, "height": 936},
+  "devSmoke": {"dragScore": [0,4],"reloadScore":4,"language":"RU/EN live","musicVolumeAfterReload":1,"sfxVolumeAfterReload":65,"restartScore":0,"bestAfterRestart":4},
+  "productionSmoke": {"entryScript":"./assets/index-CH6bdIn6.js","dragScore":[0,2],"reloadScore":2,"bestScore":4,"language":"ru","scrollHeight":936},
+  "android": "NOT RUN",
+  "yandexDraft": "NOT RUN",
+  "localPlaywright": "NOT RUN: socket() failed: Operation not permitted"
+}

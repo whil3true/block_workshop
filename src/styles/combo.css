@@ -1,0 +1,41 @@
+.combo-callout {
+  position: fixed;
+  top: max(var(--screen-pad), env(safe-area-inset-top));
+  left: calc(50% + (env(safe-area-inset-left) - env(safe-area-inset-right)) / 2);
+  z-index: var(--z-overlay);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-piece-line);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%);
+}
+
+.combo-callout[data-visible='true'] {
+  animation: comboPulse 900ms var(--anim-easing) forwards;
+}
+
+@keyframes comboPulse {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.15);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1);
+  }
+}

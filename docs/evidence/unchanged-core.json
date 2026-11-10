@@ -1,0 +1,7 @@
+{
+  "engine.ts": true,
+  "pieces.ts": true,
+  "board.ts": true,
+  "tray.ts": true,
+  "layout.ts": true
+}

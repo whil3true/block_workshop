@@ -1,0 +1,13 @@
+{
+  "THIRD_PARTY_NOTICES.txt": "724879b6b731670e65905b0643322cbcc78110baeec927849fa9760d9ed22534",
+  "audio/clear.wav": "ad7b6f23bffa91cc69efaa9bbd01546f978b5fa4b0cab270e7c208fdad42d6d7",
+  "audio/combo.wav": "91f2cdd53417b34c4f6f359ac45049cfe2db526f134046f245c28a16793aaf9c",
+  "audio/gameover.wav": "304d66dc7e4f68db89d4787bd9a0aff0aa2c9ecbc6a0f1f93dd60c7e641d2874",
+  "audio/perfect.wav": "07fc5388af962c2fab418a2095498e8b48bab3d7f397faea22c53595070dce7a",
+  "audio/pickup.wav": "404309d66e57c864e00c1568cceb0c50613cc7682ebf6dfce8f900b9bddcdab3",
+  "audio/place.wav": "928f0b91c7468ca0e57f51d1b6fe17a674bd056b786a9f57d45bdcb3ff633492",
+  "audio/reject.wav": "1a2951805c72b0627816a7df54fe7a3155dc8da8f2d7a6b5aef4772b2ec81719",
+  "audio/workshop.wav": "b6e04a9d6807f7f63641c63926b502116541fc5db48c9145916e3e281f292dee",
+  "licenses/10block-MIT.txt": "4d013a53410d06a061d3b8839eeb393f88849466c742e171dbe95691a5223ca9",
+  "licenses/Vite-LICENSE.txt": "c6bfec08b0e78a198c5ec0c579e699d2843fd1bf81243f648620731d03f43593"
+}
