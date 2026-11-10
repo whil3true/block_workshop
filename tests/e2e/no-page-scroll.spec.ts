@@ -33,7 +33,7 @@ test('menu Settings and return-to-menu preserve session',async({page})=>{
  const score=await page.locator('.hud__pair--current .hud__score').textContent();
  await page.locator('.appbar [data-word="menu"]').click();
  await expect(page.locator('.welcome')).toBeVisible();
- await page.locator('.welcome [data-word="play"]').click();
+ await page.locator('.welcome [data-word="play"], .welcome [data-word="resume"]').click();
  await expect(page.locator('.hud__pair--current .hud__score')).toHaveText(score??'0');
  await expect(page.locator('.hud__mute')).toHaveCount(0);
 });
