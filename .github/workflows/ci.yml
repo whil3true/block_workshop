@@ -3,7 +3,8 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # Keep the runner compatible with the locked Playwright release.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
