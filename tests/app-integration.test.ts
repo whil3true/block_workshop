@@ -6,7 +6,7 @@ import { attachBrowserGameplayLifecycle } from '../src/app/BrowserGameplayLifecy
 let app:ReturnType<typeof mountApplication>|undefined;
 afterEach(()=>{app?.destroy();app=undefined;vi.restoreAllMocks();document.body.replaceChildren();});
 const html=()=>{document.body.innerHTML='<div id="boot"></div><div id="app"></div>';};
-const start=()=>document.querySelector<HTMLButtonElement>('.welcome [data-word="play"]')!.click();
+const start=()=>document.querySelector<HTMLButtonElement>('.welcome [data-word="play"], .welcome [data-word="resume"]')!.click();
 const settle=async()=>{await Promise.resolve();await Promise.resolve();};
 describe('DOM application lifecycle',()=>{
  it('mounts once, ready after frame, gameplay only after Play',async()=>{
