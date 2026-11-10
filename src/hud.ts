@@ -3,7 +3,6 @@ export function createHud(): HTMLElement {
   hud.className = 'hud';
   hud.appendChild(createPair('current', 'SCORE'));
   hud.appendChild(createPair('best', 'BEST'));
-  hud.appendChild(createMuteButton());
   return hud;
 }
 
