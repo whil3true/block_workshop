@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { seed, snapshot, click, open, drag, frames } from './helpers';
 import type { YandexSdk } from '../../src/platform/YandexSdkTypes';
 declare global { interface Window { qaSdk: {

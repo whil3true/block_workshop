@@ -54,7 +54,8 @@ is absent.
 
 ## Verification and risks
 
-Original baseline: 432 passing unit tests. All are retained; original DOM
+Original baseline: 432 passing unit tests. Current suite: 444 tests, including
+12 new production-model/parity/locale/geometry/defeat checks. All baseline tests are retained; original DOM
 components are isolated under `tests/legacy` as a behavioral oracle, never imported
 by production. Snapshot/reward regressions run against the production model.
 Eight seeded 100-move parity runs compare complete state, sound event priority,
@@ -86,3 +87,21 @@ is redistributed in `public/licenses`. Donor components are reused under explici
 project-owner authorization; the donor snapshot has no general LICENSE file, so
 no blanket open-source license is inferred. No donor logos, chapters, media,
 artwork, music, fonts, or campaign data are included.
+
+## Browser evidence review
+
+Production screenshots from Actions run 43183185664 were visually reviewed for
+393×852 mobile gameplay, RU settings with both sliders, 320×568 and 1920×1080
+layout. Buttons, board and localized text fit. Native Chromium touch drag,
+double-tap scale protection and browser-pause cancellation passed. Firefox and
+WebKit both confirmed all SDK mock callback/ownership scenarios.
+
+The initial defeat fixture accidentally cleared nearly every row/column and was
+therefore still playable. It is replaced with a diagonal-hole board which the
+production unit test proves reaches game over after the specified move. Chromium
+completed the long settings/reload/restart journey up to its final reload before
+the default 30-second per-test deadline; the suite now allows 60 seconds for
+hosted software WebGL, while individual assertion timeouts remain unchanged.
+Every final browser scenario additionally rejects uncaught page errors.
+
+The PR remains a draft. Physical Android and real Yandex ads are pending.

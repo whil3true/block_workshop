@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { seed, snapshot, point, click, frames, open, drag } from './helpers';
 test.use({ viewport: { width:393, height:852 } });
 test('Canvas placement, continued board, live RU/EN, volume settings and confirmed restart', async ({page}, info) => {
