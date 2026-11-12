@@ -12,6 +12,7 @@ import { gameAudio } from '../audio/GameAudio';
 import { attachBrowserGameplayLifecycle } from './BrowserGameplayLifecycle';
 import { LocaleRuntime } from './LocaleRuntime';
 import { PauseGate } from './PauseGate';
+import { shouldSuspendAudio } from './AudioPausePolicy';
 import { AdFlow } from './AdFlow';
 import { WorkshopScene } from '../phaser/WorkshopScene';
 import { computeRenderScale, selectStartupRenderScale, isDesktopBrowserUserAgent, LOGICAL_GAME_WIDTH, LOGICAL_GAME_HEIGHT } from '../phaser/Display';
@@ -50,7 +51,9 @@ export function mountApplication(platform: PlatformService) {
  });
  const detachLocale = locale.subscribe(translate);
  const detachGate = gate.subscribe(() => {
-  manager.setAdActive(gate.has('sdk') || gate.has('browser') || gate.has('ad') || gate.has('transition') || gate.has('manual'));
+  // A modal pauses gameplay input, not background music or UI SFX.
+  // Only external interruptions (SDK/browser/ad/transition) suspend audio.
+  manager.setAdActive(shouldSuspendAudio(gate));
   scene?.onPauseChange(); flow.flushReward();
   if (gate.paused) platform.setGameplayActive(false);
  });
