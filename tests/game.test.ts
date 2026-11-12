@@ -810,3 +810,64 @@ describe('place() — tray refill', () => {
     }
   });
 });
+
+describe('localized labels on gameplay render', () => {
+  const ru = {
+    score: 'СЧЁТ', best: 'РЕКОРД', gameOver: 'Нет доступных ходов',
+    newGame: 'Новая игра', combo: 'КОМБО',
+  };
+  const en = {
+    score: 'SCORE', best: 'BEST', gameOver: 'No more moves',
+    newGame: 'New game', combo: 'COMBO',
+  };
+
+  it('initializes a finished board with Russian text before it becomes visible', () => {
+    const game = createGame({
+      initialBoard: fullBoard(),
+      getLabels: () => ru,
+    });
+    const root = document.createElement('div');
+    game.mount(root);
+    expect(game.gameOver).toBe(true);
+    expect(root.querySelector('.overlay')?.getAttribute('data-visible')).toBe('true');
+    expect(root.querySelector('.overlay__heading')?.textContent).toBe(ru.gameOver);
+    expect(root.querySelector('.overlay__button')?.textContent).toBe(ru.newGame);
+    expect(root.querySelector('.hud__pair--current .hud__label')?.textContent).toBe(ru.score);
+    expect(root.querySelector('.hud__pair--best .hud__label')?.textContent).toBe(ru.best);
+  });
+
+  it('keeps the current locale through placement, restart and a language change', () => {
+    let active = ru;
+    const game = createGame({
+      rng: mulberry32(1),
+      getLabels: () => active,
+    });
+    const root = document.createElement('div');
+    game.mount(root);
+    game.place(0, 0, 0);
+    expect(root.querySelector('.hud__pair--current .hud__label')?.textContent).toBe(ru.score);
+    expect(root.querySelector('.overlay__heading')?.textContent).toBe(ru.gameOver);
+    active = en;
+    game.commitRestart();
+    expect(root.querySelector('.hud__pair--current .hud__label')?.textContent).toBe(en.score);
+    expect(root.querySelector('.overlay__heading')?.textContent).toBe(en.gameOver);
+    active = ru;
+    game.place(0, 0, 0);
+    expect(root.querySelector('.hud__pair--current .hud__label')?.textContent).toBe(ru.score);
+    expect(root.querySelector('.overlay__heading')?.textContent).toBe(ru.gameOver);
+  });
+
+  it('shows a Russian COMBO immediately when a row and column clear together', () => {
+    const seed = findSeedWithPieces(([first]) => first === 'single');
+    const board: CellState[][] = Array.from({ length: 10 }, () => Array<CellState>(10).fill(null));
+    for (let col = 0; col < 9; col++) board[9]![col] = 'sq2';
+    for (let row = 0; row < 9; row++) board[row]![9] = 'sq2';
+    board[5]![5] = 'sq2';
+    const game = createGame({ rng: mulberry32(seed), initialBoard: board, getLabels: () => ru });
+    const root = document.createElement('div');
+    game.mount(root);
+    game.place(0, 9, 9);
+    expect(root.querySelector('.combo-callout')?.textContent).toBe('КОМБО ×1');
+    expect(root.querySelector('.overlay__heading')?.textContent).toBe(ru.gameOver);
+  });
+});

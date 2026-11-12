@@ -66,7 +66,19 @@ export function mountApplication(platform: PlatformService, frame = afterFrame) 
  const welcomeSettings = button('settings', () => settings());
  try { rules.hidden = localStorage.getItem('block-workshop:tutorial-seen') === 'true'; } catch { /* show tutorial */ }
  start.append(brand, rules, play, welcomeSettings);
- game = createGame({ audio, canInteract: () => !gate.paused, onRestart: () => confirmRestart(), onChange: () => sync() });
+ game = createGame({
+  audio,
+  getLabels: () => ({
+   score: locale.t('score'),
+   best: locale.t('best'),
+   gameOver: locale.t('gameOver'),
+   newGame: locale.t('newGame'),
+   combo: locale.t('combo'),
+  }),
+  canInteract: () => !gate.paused,
+  onRestart: () => confirmRestart(),
+  onChange: () => sync(),
+ });
  game.mount(app);
  if (game.score > 0 && !game.gameOver) play.dataset['word'] = 'resume';
  const hud = app.querySelector<HTMLElement>('.hud')!;

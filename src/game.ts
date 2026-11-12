@@ -10,7 +10,7 @@ import {
 import { CATALOG, findPieceById, sampleTray, type Piece } from './pieces';
 import { createBoard, renderBoardState } from './board';
 import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
-import { createHud, renderBestScore, renderScore } from './hud';
+import { createHud, renderBestScore, renderHudLabels, renderScore } from './hud';
 import { createOverlay, renderOverlay } from './overlay';
 import { createSilentAudio, type AudioApi } from './audio';
 import {
@@ -23,7 +23,23 @@ import {
 
 export { TRAY_SIZE };
 
+/** Text injected by the host's active locale. The game renderer must not
+ * temporarily emit English placeholders when a player selects Russian. */
+export type GameLabels = {
+  readonly score: string;
+  readonly best: string;
+  readonly gameOver: string;
+  readonly newGame: string;
+  readonly combo: string;
+};
+
+const DEFAULT_GAME_LABELS: GameLabels = {
+  score: 'SCORE', best: 'BEST', gameOver: 'GAME OVER',
+  newGame: 'New game', combo: 'COMBO',
+};
+
 export type GameOptions = {
+  readonly getLabels?: () => GameLabels;
   readonly rng?: () => number;
   readonly initialBoard?: BoardState;
   readonly audio?: AudioApi;
@@ -77,6 +93,7 @@ function createComboCallout(): HTMLElement {
 export function createGame(options: GameOptions = {}): GameApi {
   const rng = options.rng ?? Math.random;
   const audio = options.audio ?? createSilentAudio();
+  const labels = (): GameLabels => options.getLabels?.() ?? DEFAULT_GAME_LABELS;
   let board: BoardState = options.initialBoard ?? createEmptyBoard();
   let tray: Array<Piece | null> = [];
   let score = 0;
@@ -92,12 +109,12 @@ export function createGame(options: GameOptions = {}): GameApi {
   let comboTimeoutId: ReturnType<typeof setTimeout> | null = null;
   const boardEl = createBoard();
   const trayEl = createTray();
-  const hudEl = createHud();
-  const overlayEl = createOverlay();
+  const hudEl = createHud(labels());
+  const overlayEl = createOverlay(labels());
   const comboEl = createComboCallout();
 
   function showComboCallout(currentStreak: number): void {
-    comboEl.textContent = `COMBO ×${currentStreak}`;
+    comboEl.textContent = `${labels().combo} ×${currentStreak}`;
     comboEl.dataset['visible'] = 'true';
     if (comboTimeoutId !== null) clearTimeout(comboTimeoutId);
     comboRemaining = COMBO_CALLOUT_DURATION_MS;
@@ -149,6 +166,8 @@ export function createGame(options: GameOptions = {}): GameApi {
   }
 
   function render(): void {
+    const text = labels();
+    renderHudLabels(hudEl, text);
     renderScore(hudEl, score);
     renderBestScore(hudEl, bestScore);
     renderBoardState(boardEl, board);
@@ -164,7 +183,7 @@ export function createGame(options: GameOptions = {}): GameApi {
         slot.removeAttribute('data-piece-id');
       }
     }
-    renderOverlay(overlayEl, { visible: gameOver, score });
+    renderOverlay(overlayEl, { visible: gameOver, score, labels: text });
     options.onChange?.();
   }
 
