@@ -1,5 +1,7 @@
 import { describe,it,expect,vi,afterEach } from 'vitest';
 import { AudioManager, type AudioOutput } from '../src/audio/AudioManager';
+import { shouldSuspendAudio } from '../src/app/AudioPausePolicy';
+import { PauseGate } from '../src/app/PauseGate';
 import { createAudioSettings, parseAudioSettings } from '../src/audio/AudioSettings';
 import { WebAudioSettingsStore } from '../src/platform/WebAudioSettingsStore';
 import { LocaleRuntime } from '../src/app/LocaleRuntime';
@@ -43,5 +45,55 @@ describe('Android media-session mechanism (mock, not hardware)',()=>{
   const first=instances.find(a=>a.src.endsWith('workshop.wav')&&a.plays>0)!;first.currentTime=12.5;manager.setPageVisible(false);
   expect(first.src).toBe('');expect(first.paused).toBe(true);expect(media.playbackState).toBe('none');expect(media.metadata).toBeNull();first.listeners.get('ended')?.();
   manager.setPageVisible(true);const second=instances.find(a=>a!==first&&a.src.endsWith('workshop.wav'))!;expect(second.currentTime).toBe(12.5);expect(first.plays).toBe(1);manager.dispose();
+ });
+});
+
+describe('audio ownership during Phaser settings dialogs',()=>{
+ it('keeps music and UI effects audible through manual pause, including volume adjustments',()=>{
+  const s=setup(),gate=new PauseGate();gate.set('startup',true);
+  const stop=gate.subscribe(()=>s.manager.setAdActive(shouldSuspendAudio(gate)));
+  s.manager.unlock();
+  expect(s.output.startMusic).toHaveBeenCalledTimes(1);
+  gate.set('startup',false);gate.set('manual',true);
+  expect(gate.paused).toBe(true);
+  expect(s.output.pauseMusic).not.toHaveBeenCalled();
+  s.manager.playEffect('pickup');
+  expect(s.output.playEffect).toHaveBeenCalledTimes(1);
+  s.manager.setMusicVolume(.75);
+  s.manager.setSfxVolume(.3);
+  expect(s.output.setMusicVolume).toHaveBeenLastCalledWith(.75);
+  expect(s.manager.getSettings()).toMatchObject({musicVolume:.75,sfxVolume:.3});
+  gate.set('manual',false);
+  expect(s.output.pauseMusic).not.toHaveBeenCalled();
+  expect(s.output.resumeMusic).not.toHaveBeenCalled();
+  stop();s.manager.dispose();
+ });
+ it.each(['sdk','browser','ad','transition'] as const)('%s still silences audio and resumes inside an open settings dialog',reason=>{
+  const s=setup(),gate=new PauseGate();
+  const stop=gate.subscribe(()=>s.manager.setAdActive(shouldSuspendAudio(gate)));
+  s.manager.unlock();
+  gate.set('manual',true);gate.set(reason,true);
+  expect(s.output.pauseMusic).toHaveBeenCalledTimes(1);
+  s.manager.playEffect('pickup');
+  expect(s.output.playEffect).not.toHaveBeenCalled();
+  gate.set(reason,false);
+  expect(gate.has('manual')).toBe(true);
+  expect(s.output.resumeMusic).toHaveBeenCalledTimes(1);
+  s.manager.playEffect('pickup');
+  expect(s.output.playEffect).toHaveBeenCalledTimes(1);
+  stop();s.manager.dispose();
+ });
+ it('does not restore sound until the final external pause owner is released',()=>{
+  const s=setup(),gate=new PauseGate();
+  const stop=gate.subscribe(()=>s.manager.setAdActive(shouldSuspendAudio(gate)));
+  s.manager.unlock();
+  gate.set('manual',true);gate.set('sdk',true);gate.set('ad',true);
+  expect(s.output.pauseMusic).toHaveBeenCalledTimes(1);
+  gate.set('sdk',false);
+  expect(s.output.resumeMusic).not.toHaveBeenCalled();
+  gate.set('ad',false);
+  expect(s.output.resumeMusic).toHaveBeenCalledTimes(1);
+  expect(gate.paused).toBe(true);
+  stop();s.manager.dispose();
  });
 });
