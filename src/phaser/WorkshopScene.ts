@@ -26,6 +26,7 @@ export class WorkshopScene extends Phaser.Scene {
  private preview!: Phaser.GameObjects.Graphics;
  private ghost!: Phaser.GameObjects.Graphics;
  private dirty = true;
+ private disposed = false;
  private started = false;
  private modal: Modal = null;
  private ready = false;
@@ -38,6 +39,8 @@ export class WorkshopScene extends Phaser.Scene {
  private comboRemaining = 0;
  constructor(private readonly services: SceneServices) { super('WorkshopScene'); }
  create(): void {
+  this.disposed = false;
+  this.events.once(Phaser.Scenes.Events.DESTROY, () => { this.disposed = true; });
   configureLogicalCamera(this, this.services.density);
   this.root = this.add.container(0, 0);
   this.preview = this.add.graphics().setDepth(10);
@@ -54,6 +57,7 @@ export class WorkshopScene extends Phaser.Scene {
   const resize = (): void => { this.cancelDrag(); this.invalidate(); };
   this.scale.on(Phaser.Scale.Events.RESIZE, resize);
   this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+   this.disposed = true;
    this.game.canvas.removeEventListener('pointercancel', cancel);
    this.scale.off(Phaser.Scale.Events.RESIZE, resize);
   });
@@ -112,8 +116,9 @@ export class WorkshopScene extends Phaser.Scene {
    this.text(240, 27, locale.t('title'), 'hudPrimary', 450);
    this.button('settings', 'settings', 117, 76, () => this.openModal('settings'), 210);
    this.button('menu', 'menu', 363, 76, () => this.toMenu(), 210);
-   this.text(130, 127, `${locale.t('score')}: ${model.score}`, 'hudPrimary');
-   this.text(355, 127, `${locale.t('best')}: ${model.bestScore}`, 'hudPrimary');
+   const score = this.text(130, 127, `${locale.t('score')}: ${model.score}`, 'hudPrimary');
+   const best = this.text(355, 127, `${locale.t('best')}: ${model.bestScore}`, 'hudPrimary');
+   for (const label of [score, best]) if (label.width > 210) label.setScale(210 / label.width);
    const graphics = this.add.graphics(); this.root.add(graphics);
    graphics.fillStyle(0x1e293b).fillRoundedRect(14, 150, 452, 452, 8);
    for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) {
@@ -121,7 +126,7 @@ export class WorkshopScene extends Phaser.Scene {
     graphics.fillStyle(family ? PIECE_COLORS[family] : 0x334155)
      .fillRoundedRect(BOARD.x + c * BOARD.cell + 1, BOARD.y + r * BOARD.cell + 1, BOARD.cell - 2, BOARD.cell - 2, 4);
    }
-   if (this.comboRemaining > 0) this.text(240, 617, `${locale.t('combo')} ×${this.combo}`, 'hudPrimary');
+   if (this.comboRemaining > 0) this.text(240, 612, `${locale.t('combo')} ×${this.combo}`, 'hudPrimary');
    model.trayPieces.forEach((piece, slot) => {
     if (!piece) return;
     const x = TRAY.centers[slot]!;
@@ -189,7 +194,7 @@ export class WorkshopScene extends Phaser.Scene {
     const offer = this.offering; this.closeModal();
     if (restart) { this.comboRemaining = 0; void this.services.flow.restart(); }
     else if (offer) void this.services.flow.reward(offer).then(granted => {
-     if (!this.scene.isActive()) return;
+     if (this.disposed || !this.scene.isActive()) return;
      if (!granted) { this.notice = true; this.noticeUntil = performance.now() + 4000; } this.invalidate();
     });
    }, 320, false, true);

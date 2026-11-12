@@ -13,7 +13,7 @@ test('Canvas placement, continued board, live RU/EN, volume settings and confirm
  await click(page,117,76);await click(page,150,230);await expect(page.locator('html')).toHaveAttribute('lang','ru');
  await click(page,80,338);await click(page,400,438);
  const settings=await page.evaluate(()=>localStorage.getItem('block-workshop:audio-settings'));
- expect(settings).toBeTruthy();
+ expect(JSON.parse(settings!)).toMatchObject({musicVolume:0,sfxVolume:1});
  await page.screenshot({path:info.outputPath('mobile-settings-ru.png')});
  await click(page,240,667);await drag(page,1,9,9);expect((await snapshot(page)).score).toBe(2);
  await click(page,130,759);await click(page,240,518);expect((await snapshot(page)).score).toBe(2);
@@ -79,4 +79,11 @@ test('touch drag, double-tap zoom protection and browser pause cancel',async({pa
  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));await frames(page);
  const target=await point(page,438,574);await page.mouse.move(target.x,target.y);await page.mouse.up();expect((await snapshot(page)).score).toBe(1);
  await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));await frames(page);await drag(page,1,9,9);expect((await snapshot(page)).score).toBe(2);
+});
+test('large saved score fits a compact mobile HUD without changing progress',async({page},info)=>{
+ await seed(page,{locale:'ru',score:123456789012345,streak:2,rewardUsed:true});await page.setViewportSize({width:320,height:568});
+ await open(page);await click(page,240,510);await page.screenshot({path:info.outputPath('large-score-hud.png')});
+ expect((await snapshot(page)).score).toBe(123456789012345);
+ await click(page,117,76);await click(page,330,230);await click(page,240,667);await drag(page,0,0,0);
+ expect((await snapshot(page)).score).toBe(123456789012346);
 });

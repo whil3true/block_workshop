@@ -9,7 +9,7 @@ declare global { interface Window { qaSdk: {
 async function sdk(page: Page, startupPause = false) {
  await page.route('http://sdk.block.test/**', async route => {
   const url = new URL(route.request().url());
-  const response = await route.fetch({url:'http://127.0.0.1:4180'+url.pathname});
+  const response = await route.fetch({url:'http://127.0.0.1:4180'+url.pathname, headers:{...route.request().headers(),host:'127.0.0.1:4180'}});
   await route.fulfill({response});
  });
  await page.addInitScript(startupPause => {

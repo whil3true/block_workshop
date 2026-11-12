@@ -1,10 +1,10 @@
 # Мастерская блоков / Block Workshop
 
-**Технический MVP; Android/Yandex QA pending.** Рабочее название. Одна бесконечная партия 10×10, 37 исходных форм, три фигуры. TypeScript + DOM/CSS + Vite. Phaser и runtime npm-зависимостей нет.
+**Технический MVP; Android/Yandex QA pending.** Рабочее название. Одна бесконечная партия 10×10, 37 исходных форм, три фигуры. Phaser 4.2.1 + TypeScript 5.9.2 + Vite. Обычный интерфейс полностью внутри Canvas.
 
 ## Запуск
 
-Нужен Node.js 22+ (проверены 22.23.4 и 24.22.1). Распакуйте проект, откройте терминал в папке с package.json:
+Нужен Node.js 22+ (проверены 22.23.4 и 24.22.1). Откройте терминал в папке клонированного проекта с package.json:
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
@@ -23,12 +23,12 @@ npm run preview -- --host 0.0.0.0
 Для автоматических браузерных тестов на машине с доступным Chromium:
 
 ```sh
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm run build
 npm run test:e2e
 ```
 
-Браузерные E2E подготовлены, но локальный headless Chromium в исходной среде не запустился (`socket() failed: Operation not permitted`). Факт desktop-проверки через отдельный управляемый браузер описан в техническом отчёте. Это не Android QA и не успешный запуск Playwright suite.
+Playwright проверяет production Canvas в Chromium, Firefox и WebKit. В этой среде локальный Chromium ограничен запретом AF_UNIX; результаты GitHub Actions и фактические ограничения фиксируются в [отчёте миграции](docs/PHASER_MIGRATION.md). Физический Android и реальный SDK требуют отдельного QA.
 
 ## Проверка на Android
 
@@ -36,9 +36,9 @@ npm run test:e2e
 
 ## Что реализовано
 
-- Исходные 10×10, формы, очистка пересечений, scoring/streak/perfect clear и touch lift 32 px.
+- Исходные 10×10, формы, очистка пересечений, scoring/streak/perfect clear и touch lift 40 логических px.
 - Версионированный snapshot поля/набора/очков/streak/использованной награды; независимые best/mute/volume/locale.
-- Короткое обучение при первом запуске, Settings, живое RU/EN, музыка и эффекты с отдельной громкостью.
+- Правила на главном экране, Settings, живое RU/EN, музыка и эффекты с отдельной громкостью.
 - SDK bootstrap до UI/аудио; LoadingAPI после кадра; независимые SDK/browser/manual/ad/transition/startup паузы.
 - Interstitial на подтверждённой новой партии. Destination применяется по callback, без ожидания SDK resume; cover показывается только при onOpen.
 - Rewarded-замена всех трёх фигур один раз за партию, только при onRewarded; набор заранее имеет хотя бы один ход. Запоздавшие callbacks не меняют новую партию или закрытое приложение.
@@ -51,12 +51,12 @@ npm run test:e2e
 - Платформенные модули: `whil3true/pairs_and_paths@da4a7612c870ce75d678b939a491157ae3670883`, перенесены по указанию владельца. Донор не изменялся.
 - Полные уведомления: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt). Перенос: [docs/PROVENANCE.md](docs/PROVENANCE.md).
 - Campaign/daily/cloud/leaderboard/shop/rotate отсутствуют. RNG после reload не воспроизводит будущую выдачу детерминированно.
-- Это отдельный проект в ветке `mvp/platform`. GitHub push, PR и публикация в Яндекс Играх не выполнялись.
+- Миграция разрабатывается в `feature/phaser-migration`, Draft PR в `dev`; merge выполняет владелец. Архитектура: [docs/PHASER_MIGRATION.md](docs/PHASER_MIGRATION.md).
 
 ## GitHub Pages (тестовая версия)
 
 В репозитории `whil3true/block_workshop` CI проверяет Node 22, unit/regression,
-production build и Chromium E2E. Только **успешный push в `dev`** инициирует
+production build и Chromium/Firefox/WebKit E2E. Только **успешный push в `dev`** инициирует
 GitHub Pages deployment. `main` не используется для публикации preview.
 
 1. GitHub → Settings → Pages → Build and deployment → Source: **GitHub Actions**.

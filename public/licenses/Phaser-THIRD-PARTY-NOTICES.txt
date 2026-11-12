@@ -23,3 +23,284 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+
+/**
+ * The MIT License (MIT)
+ *
+ * Copyright (c) Liam Brummitt and contributors.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+/**
+ * Copyright (c) 2017, Vladimir Agafonkin
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification, are
+ * permitted provided that the following conditions are met:
+ *
+ *    1. Redistributions of source code must retain the above copyright notice, this list of
+ *       conditions and the following disclaimer.
+ *
+ *    2. Redistributions in binary form must reproduce the above copyright notice, this list
+ *       of conditions and the following disclaimer in the documentation and/or other materials
+ *       provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
+ * TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+     * Converts from world X coordinates (pixels) to tile X coordinates (tile units), factoring in the
+     * layers position, scale and scroll.
+     *
+     * If no layer is specified, the maps current layer is used.
+     *
+     * You cannot call this method for Isometric or Hexagonal tilemaps as they require
+     * both `worldX` and `worldY` values to determine the correct tile, instead you
+     * should use the `worldToTileXY` method.
+     *
+     * @method Phaser.Tilemaps.Tilemap#worldToTileX
+     * @since 3.0.0
+     *
+     * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+     * @param {boolean} [snapToFloor] - Whether or not to round the tile coordinate down to the nearest integer.
+     * @param {Phaser.Cameras.Scene2D.Camera} [camera] - The Camera to use when calculating the tile index from the world values.
+     * @param {(string|number|Phaser.Tilemaps.TilemapLayer)} [layer] - The tile layer to use. If not given the current layer is used.
+     *
+     * @return {?number} Returns a number, or null if the layer given was invalid.
+     */
+
+/**
+     * Converts from world Y coordinates (pixels) to tile Y coordinates (tile units), factoring in the
+     * layers position, scale and scroll.
+     *
+     * If no layer is specified, the maps current layer is used.
+     *
+     * You cannot call this method for Isometric or Hexagonal tilemaps as they require
+     * both `worldX` and `worldY` values to determine the correct tile, instead you
+     * should use the `worldToTileXY` method.
+     *
+     * @method Phaser.Tilemaps.Tilemap#worldToTileY
+     * @since 3.0.0
+     *
+     * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+     * @param {boolean} [snapToFloor] - Whether or not to round the tile coordinate down to the nearest integer.
+     * @param {Phaser.Cameras.Scene2D.Camera} [camera] - The Camera to use when calculating the tile index from the world values.
+     * @param {(string|number|Phaser.Tilemaps.TilemapLayer)} [layer] - The tile layer to use. If not given the current layer is used.
+     *
+     * @return {?number} Returns a number, or null if the layer given was invalid.
+     */
+
+/**
+     * Converts from world XY coordinates (pixels) to tile XY coordinates (tile units), factoring in the
+     * layers position, scale and scroll. This will return a new Vector2 object or update the given
+     * `point` object.
+     *
+     * If no layer is specified, the maps current layer is used.
+     *
+     * @method Phaser.Tilemaps.Tilemap#worldToTileXY
+     * @since 3.0.0
+     *
+     * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+     * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+     * @param {boolean} [snapToFloor] - Whether or not to round the tile coordinate down to the nearest integer.
+     * @param {Phaser.Math.Vector2} [vec2] - A Vector2 to store the coordinates in. If not given a new Vector2 is created.
+     * @param {Phaser.Cameras.Scene2D.Camera} [camera] - The Camera to use when calculating the tile index from the world values.
+     * @param {(string|number|Phaser.Tilemaps.TilemapLayer)} [layer] - The tile layer to use. If not given the current layer is used.
+     *
+     * @return {?Phaser.Math.Vector2} Returns a Vector2, or null if the layer given was invalid.
+     */
+
+/**
+     * Converts from world X coordinates (pixels) to tile X coordinates (tile units), factoring in the
+     * layers position, scale and scroll.
+     *
+     * You cannot call this method for Isometric or Hexagonal tilemaps as they require
+     * both `worldX` and `worldY` values to determine the correct tile, instead you
+     * should use the `worldToTileXY` method.
+     *
+     * @method Phaser.Tilemaps.TilemapLayerBase#worldToTileX
+     * @since 3.50.0
+     *
+     * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+     * @param {boolean} [snapToFloor] - Whether or not to round the tile coordinate down to the nearest integer.
+     * @param {Phaser.Cameras.Scene2D.Camera} [camera] - The Camera to use when calculating the tile index from the world values.
+     *
+     * @return {number} The tile X coordinate based on the world value.
+     */
+
+/**
+     * Converts from world Y coordinates (pixels) to tile Y coordinates (tile units), factoring in the
+     * layers position, scale and scroll.
+     *
+     * You cannot call this method for Isometric or Hexagonal tilemaps as they require
+     * both `worldX` and `worldY` values to determine the correct tile, instead you
+     * should use the `worldToTileXY` method.
+     *
+     * @method Phaser.Tilemaps.TilemapLayerBase#worldToTileY
+     * @since 3.50.0
+     *
+     * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+     * @param {boolean} [snapToFloor] - Whether or not to round the tile coordinate down to the nearest integer.
+     * @param {Phaser.Cameras.Scene2D.Camera} [camera] - The Camera to use when calculating the tile index from the world values.
+     *
+     * @return {number} The tile Y coordinate based on the world value.
+     */
+
+/**
+     * Converts from world XY coordinates (pixels) to tile XY coordinates (tile units), factoring in the
+     * layers position, scale and scroll. This will return a new Vector2 object or update the given
+     * `point` object.
+     *
+     * @method Phaser.Tilemaps.TilemapLayerBase#worldToTileXY
+     * @since 3.50.0
+     *
+     * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+     * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+     * @param {boolean} [snapToFloor] - Whether or not to round the tile coordinate down to the nearest integer.
+     * @param {Phaser.Math.Vector2} [point] - A Vector2 to store the coordinates in. If not given a new Vector2 is created.
+     * @param {Phaser.Cameras.Scene2D.Camera} [camera] - The Camera to use when calculating the tile index from the world values.
+     *
+     * @return {Phaser.Math.Vector2} A Vector2 containing the tile coordinates of the world values.
+     */
+
+/**
+ * Converts from world XY coordinates (pixels) to hexagonal tile XY coordinates (tile units), factoring in the
+ * layer's position, scale and scroll. This will return a new Vector2 object or update the given
+ * `point` object.
+ *
+ * @function Phaser.Tilemaps.Components.HexagonalWorldToTileXY
+ * @since 3.50.0
+ *
+ * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+ * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+ * @param {boolean} snapToFloor - Whether or not to round the tile coordinates down to the nearest integer.
+ * @param {Phaser.Math.Vector2} point - A Vector2 to store the coordinates in. If not given a new Vector2 is created.
+ * @param {Phaser.Cameras.Scene2D.Camera} camera - The Camera to use when calculating the tile XY coordinates from the world values.
+ * @param {Phaser.Tilemaps.LayerData} layer - The Tilemap Layer to act upon.
+ *
+ * @return {Phaser.Math.Vector2} The XY location in tile units.
+ */
+
+/**
+ * Converts from world XY coordinates (pixels) to isometric tile XY coordinates (tile units), factoring in the
+ * layer's position, scale and scroll. This will return a new Vector2 object or update the given
+ * `point` object.
+ *
+ * @function Phaser.Tilemaps.Components.IsometricWorldToTileXY
+ * @since 3.50.0
+ *
+ * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+ * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+ * @param {boolean} snapToFloor - Whether or not to round the tile coordinate down to the nearest integer.
+ * @param {Phaser.Math.Vector2} point - A Vector2 to store the coordinates in. If not given a new Vector2 is created.
+ * @param {Phaser.Cameras.Scene2D.Camera} camera - The Camera to use when calculating the tile index from the world values.
+ * @param {Phaser.Tilemaps.LayerData} layer - The Tilemap Layer to act upon.
+ * @param {boolean} [originTop=true] - Which is the active face of the isometric tile? The top (default, true), or the base? (false)
+ *
+ * @return {Phaser.Math.Vector2} The XY location in tile units.
+ */
+
+/**
+ * Converts from world XY coordinates (pixels) to staggered tile XY coordinates (tile units), factoring in the
+ * layer's position, scale and scroll. This will return a new Vector2 object or update the given
+ * `point` object.
+ *
+ * @function Phaser.Tilemaps.Components.StaggeredWorldToTileXY
+ * @since 3.50.0
+ *
+ * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+ * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+ * @param {boolean} snapToFloor - Whether or not to round the tile coordinate down to the nearest integer.
+ * @param {Phaser.Math.Vector2} point - A Vector2 to store the coordinates in. If not given a new Vector2 is created.
+ * @param {Phaser.Cameras.Scene2D.Camera} camera - The Camera to use when calculating the tile index from the world values.
+ * @param {Phaser.Tilemaps.LayerData} layer - The Tilemap Layer to act upon.
+ *
+ * @return {Phaser.Math.Vector2} The XY location in tile units.
+ */
+
+/**
+ * Converts from world Y coordinates (pixels) to staggered tile Y coordinates (tile units), factoring in the
+ * layer's position, scale and scroll.
+ *
+ * @function Phaser.Tilemaps.Components.StaggeredWorldToTileY
+ * @since 3.50.0
+ *
+ * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+ * @param {boolean} snapToFloor - Whether or not to round the tile coordinate down to the nearest integer.
+ * @param {Phaser.Cameras.Scene2D.Camera} camera - The Camera to use when calculating the tile index from the world values.
+ * @param {Phaser.Tilemaps.LayerData} layer - The Tilemap Layer to act upon.
+ *
+ * @return {number} The Y location in tile units.
+ */
+
+/**
+ * Converts from world X coordinates (pixels) to tile X coordinates (tile units), factoring in the
+ * layer's position, scale and scroll.
+ *
+ * @function Phaser.Tilemaps.Components.WorldToTileX
+ * @since 3.0.0
+ *
+ * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+ * @param {boolean} snapToFloor - Whether or not to round the tile coordinate down to the nearest integer.
+ * @param {?Phaser.Cameras.Scene2D.Camera} camera - The Camera to use when calculating the tile index from the world values.
+ * @param {Phaser.Tilemaps.LayerData} layer - The Tilemap Layer to act upon.
+ *
+ * @return {number} The X location in tile units.
+ */
+
+/**
+ * Converts from world XY coordinates (pixels) to tile XY coordinates (tile units), factoring in the
+ * layer's position, scale and scroll. This will return a new Vector2 object or update the given
+ * `point` object.
+ *
+ * @function Phaser.Tilemaps.Components.WorldToTileXY
+ * @since 3.0.0
+ *
+ * @param {number} worldX - The x coordinate to be converted, in pixels, not tiles.
+ * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+ * @param {boolean} snapToFloor - Whether or not to round the tile coordinate down to the nearest integer.
+ * @param {Phaser.Math.Vector2} point - A Vector2 to store the coordinates in. If not given a new Vector2 is created.
+ * @param {Phaser.Cameras.Scene2D.Camera} camera - The Camera to use when calculating the tile index from the world values.
+ * @param {Phaser.Tilemaps.LayerData} layer - The Tilemap Layer to act upon.
+ *
+ * @return {Phaser.Math.Vector2} The XY location in tile units.
+ */
+
+/**
+ * Converts from world Y coordinates (pixels) to tile Y coordinates (tile units), factoring in the
+ * layer's position, scale and scroll.
+ *
+ * @function Phaser.Tilemaps.Components.WorldToTileY
+ * @since 3.0.0
+ *
+ * @param {number} worldY - The y coordinate to be converted, in pixels, not tiles.
+ * @param {boolean} snapToFloor - Whether or not to round the tile coordinate down to the nearest integer.
+ * @param {?Phaser.Cameras.Scene2D.Camera} camera - The Camera to use when calculating the tile index from the world values.
+ * @param {Phaser.Tilemaps.LayerData} layer - The Tilemap Layer to act upon.
+ *
+ * @return {number} The Y location in tile units.
+ */
