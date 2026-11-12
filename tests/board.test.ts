@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { createBoard, renderBoardState } from '../src/board';
+import { createBoard, renderBoardState } from './legacy/board';
 import { readCss } from './helpers';
 import {
   createEmptyBoard,

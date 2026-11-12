@@ -1,4 +1,4 @@
-import type { Piece } from './pieces';
+import type { Piece } from '../../src/pieces';
 
 export const TRAY_SIZE = 3;
 

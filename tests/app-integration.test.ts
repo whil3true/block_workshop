@@ -1,6 +1,6 @@
 import { describe,it,expect,vi,afterEach } from 'vitest';
 vi.mock('../src/audio/HtmlAudioOutput',()=>({HtmlAudioOutput:class {onUserGesture(){}setEffectsActive(){}playEffect(){}startMusic(){}setMusicVolume(){}pauseMusic(){}resumeMusic(){}stopMusic(){}}}));
-import { mountApplication, boot } from '../src/app/bootstrap';
+import { mountApplication, boot } from './legacy/app/bootstrap';
 import { WebPlatform } from '../src/platform/WebPlatform';
 import { attachBrowserGameplayLifecycle } from '../src/app/BrowserGameplayLifecycle';
 let app:ReturnType<typeof mountApplication>|undefined;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createDrag, type DragApi } from '../src/drag';
-import { createGame, type GameApi } from '../src/game';
+import { createDrag, type DragApi } from './legacy/drag';
+import { createGame, type GameApi } from './legacy/game';
 import { canPlace, type CellState } from '../src/engine';
 import { mulberry32, mountGame } from './helpers';
 

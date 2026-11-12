@@ -1,5 +1,5 @@
 import { it,expect,vi } from 'vitest';
-import { createGame } from '../src/game';
+import { createGame } from './legacy/game';
 import { createEmptyBoard } from '../src/engine';
 import { saveLastGame } from '../src/storage';
 it('combo countdown preserves remaining time across a long pause',()=>{

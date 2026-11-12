@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { createOverlay, renderOverlay } from '../src/overlay';
+import { createOverlay, renderOverlay } from './legacy/overlay';
 import { readCss } from './helpers';
 
 describe('createOverlay()', () => {

@@ -5,6 +5,10 @@ jobs:
   verify:
     # Keep the runner compatible with the locked Playwright release.
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     permissions:
       contents: read
     steps:
@@ -15,20 +19,20 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run check
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:e2e -- --project=${{ matrix.browser }} --max-failures=3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: build-and-results
+          name: build-and-results-${{ matrix.browser }}
           path: |
             dist
             test-results
       - name: Configure GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && matrix.browser == 'chromium'
         uses: actions/configure-pages@v5
       - name: Upload Pages build
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && matrix.browser == 'chromium'
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist

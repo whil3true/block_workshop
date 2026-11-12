@@ -1,8 +1,8 @@
 import type { GameApi } from './game';
-import type { Piece } from './pieces';
-import { canPlace, BOARD_SIZE } from './engine';
+import type { Piece } from '../../src/pieces';
+import { canPlace, BOARD_SIZE } from '../../src/engine';
 import { renderBoardState } from './board';
-import { createSilentAudio, type AudioApi } from './audio';
+import { createSilentAudio, type AudioApi } from '../../src/audio';
 
 export type DragApi = {
   destroy(): void;

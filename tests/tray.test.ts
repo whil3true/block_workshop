@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTray, renderPieceInSlot } from '../src/tray';
+import { createTray, renderPieceInSlot } from './legacy/tray';
 import { CATALOG, type Piece } from '../src/pieces';
 
 function pieceById(id: string): Piece {

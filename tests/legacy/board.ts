@@ -1,4 +1,4 @@
-import { BOARD_SIZE, type BoardState } from './engine';
+import { BOARD_SIZE, type BoardState } from '../../src/engine';
 
 export function createBoard(): HTMLElement {
   const board = document.createElement('div');
