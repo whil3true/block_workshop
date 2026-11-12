@@ -77,6 +77,17 @@ describe('DOM application lifecycle',()=>{
   expect(app.game.gameOver).toBe(false);
   expect(document.querySelector<HTMLElement>('.overlay')?.dataset['visible']).toBe('false');
  });
+
+ it('never reintroduces English game labels after placement in a Russian session',async()=>{
+  html();app=mountApplication(new WebPlatform('en'),async()=>{});await settle();
+  app.locale.set('ru');start();
+  expect(document.querySelector('.hud__pair--current .hud__label')?.textContent).toBe('СЧЁТ');
+  app.game.place(0,0,0);
+  expect(document.querySelector('.hud__pair--current .hud__label')?.textContent).toBe('СЧЁТ');
+  expect(document.querySelector('.hud__pair--best .hud__label')?.textContent).toBe('РЕКОРД');
+  expect(document.querySelector('.overlay__heading')?.textContent).toBe('Нет доступных ходов');
+  expect(document.querySelector('.overlay__button')?.textContent).toBe('Новая игра');
+ });
  it.each(['resize','orientationchange'])('%s cancels drag without consuming a piece',async event=>{
   html();app=mountApplication(new WebPlatform('en'),async()=>{});await settle();start();const ids=app.game.trayPieces.map(p=>p?.id);
   document.querySelector('.tray__slot')!.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1}));window.dispatchEvent(new Event(event));expect(document.querySelector('.ghost')).toBeNull();expect(app.game.trayPieces.map(p=>p?.id)).toEqual(ids);
