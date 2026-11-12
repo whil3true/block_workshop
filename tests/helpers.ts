@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { createGame, type GameApi, type GameOptions } from '../src/game';
+import { createGame, type GameApi, type GameOptions } from './legacy/game';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -25,7 +25,8 @@ export function cellsAsSet(
 
 /** Read a source file relative to the repo root (e.g. `src/styles/board.css`). */
 export function readSrc(relPath: string): string {
-  return readFileSync(resolve(REPO_ROOT, relPath), 'utf-8');
+  const requested = resolve(REPO_ROOT, relPath);
+  return readFileSync(existsSync(requested) ? requested : resolve(REPO_ROOT, relPath.replace(/^src\//, 'tests/legacy/')), 'utf-8');
 }
 
 /** Read a stylesheet from `src/styles/` by file name. */

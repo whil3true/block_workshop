@@ -8,10 +8,6 @@ import {
   type BoardState,
 } from './engine';
 import { CATALOG, findPieceById, sampleTray, type Piece } from './pieces';
-import { createBoard, renderBoardState } from './board';
-import { createTray, renderPieceInSlot, TRAY_SIZE } from './tray';
-import { createHud, renderBestScore, renderHudLabels, renderScore } from './hud';
-import { createOverlay, renderOverlay } from './overlay';
 import { createSilentAudio, type AudioApi } from './audio';
 import {
   clearLastGame,
@@ -21,39 +17,21 @@ import {
   saveLastGame,
 } from './storage';
 
-export { TRAY_SIZE };
+export const TRAY_SIZE = 3;
 
-/** Text injected by the host's active locale. The game renderer must not
- * temporarily emit English placeholders when a player selects Russian. */
-export type GameLabels = {
-  readonly score: string;
-  readonly best: string;
-  readonly gameOver: string;
-  readonly newGame: string;
-  readonly combo: string;
-};
-
-const DEFAULT_GAME_LABELS: GameLabels = {
-  score: 'SCORE', best: 'BEST', gameOver: 'GAME OVER',
-  newGame: 'New game', combo: 'COMBO',
-};
-
-export type GameOptions = {
-  readonly getLabels?: () => GameLabels;
+export type ModelOptions = {
   readonly rng?: () => number;
   readonly initialBoard?: BoardState;
   readonly audio?: AudioApi;
   readonly canInteract?: () => boolean;
-  readonly onRestart?: () => void;
   readonly onChange?: () => void;
+  readonly onCombo?: (streak: number) => void;
 };
 
-export type GameApi = {
-  mount(root: HTMLElement): void;
+export type ModelApi = {
   place(slotIndex: number, anchorRow: number, anchorCol: number): void;
   newGame(): void;
   commitRestart(): void;
-  setPresentationPaused(value: boolean): void;
   prepareReward(): TrayOffer | null;
   commitReward(offer: TrayOffer): boolean;
   readonly rewardUsed: boolean;
@@ -81,19 +59,9 @@ function isBoardEmpty(board: BoardState): boolean {
   return true;
 }
 
-const COMBO_CALLOUT_DURATION_MS = 900;
-
-function createComboCallout(): HTMLElement {
-  const el = document.createElement('div');
-  el.className = 'combo-callout';
-  el.dataset['visible'] = 'false';
-  return el;
-}
-
-export function createGame(options: GameOptions = {}): GameApi {
+export function createModel(options: ModelOptions = {}): ModelApi {
   const rng = options.rng ?? Math.random;
   const audio = options.audio ?? createSilentAudio();
-  const labels = (): GameLabels => options.getLabels?.() ?? DEFAULT_GAME_LABELS;
   let board: BoardState = options.initialBoard ?? createEmptyBoard();
   let tray: Array<Piece | null> = [];
   let score = 0;
@@ -103,50 +71,6 @@ export function createGame(options: GameOptions = {}): GameApi {
   let session = 1;
   let revision = 0;
   let rewardUsed = false;
-  let presentationPaused = false;
-  let comboRemaining = 0;
-  let comboStartedAt = 0;
-  let comboTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  const boardEl = createBoard();
-  const trayEl = createTray();
-  const hudEl = createHud(labels());
-  const overlayEl = createOverlay(labels());
-  const comboEl = createComboCallout();
-
-  function showComboCallout(currentStreak: number): void {
-    comboEl.textContent = `${labels().combo} ×${currentStreak}`;
-    comboEl.dataset['visible'] = 'true';
-    if (comboTimeoutId !== null) clearTimeout(comboTimeoutId);
-    comboRemaining = COMBO_CALLOUT_DURATION_MS;
-    scheduleCombo();
-  }
-
-  function scheduleCombo(): void {
-    if (presentationPaused) return;
-    comboStartedAt = Date.now();
-    comboTimeoutId = setTimeout(() => {
-      comboEl.dataset['visible'] = 'false';
-      comboTimeoutId = null;
-    }, comboRemaining);
-  }
-
-  function setPresentationPaused(value: boolean): void {
-    if (presentationPaused === value) return;
-    presentationPaused = value;
-    if (value && comboTimeoutId !== null) {
-      comboRemaining = Math.max(0, comboRemaining - (Date.now() - comboStartedAt));
-      clearTimeout(comboTimeoutId); comboTimeoutId = null;
-    } else if (!value && comboEl.dataset['visible'] === 'true') scheduleCombo();
-  }
-
-  function hideComboCallout(): void {
-    if (comboTimeoutId !== null) {
-      clearTimeout(comboTimeoutId);
-      comboTimeoutId = null;
-    }
-    comboEl.dataset['visible'] = 'false';
-  }
-
   function refillTray(): void {
     tray = sampleTray(rng, TRAY_SIZE);
   }
@@ -165,27 +89,7 @@ export function createGame(options: GameOptions = {}): GameApi {
     });
   }
 
-  function render(): void {
-    const text = labels();
-    renderHudLabels(hudEl, text);
-    renderScore(hudEl, score);
-    renderBestScore(hudEl, bestScore);
-    renderBoardState(boardEl, board);
-    const slots = trayEl.querySelectorAll<HTMLElement>('.tray__slot');
-    for (let i = 0; i < slots.length; i++) {
-      const slot = slots[i];
-      if (!slot) continue;
-      const piece = tray[i];
-      if (piece) {
-        renderPieceInSlot(slot, piece);
-      } else {
-        slot.replaceChildren();
-        slot.removeAttribute('data-piece-id');
-      }
-    }
-    renderOverlay(overlayEl, { visible: gameOver, score, labels: text });
-    options.onChange?.();
-  }
+  function notify(): void { options.onChange?.(); }
 
   // Initial state: prefer initialBoard; otherwise try to resume a snapshot;
   // otherwise start fresh with a refilled tray.
@@ -208,25 +112,7 @@ export function createGame(options: GameOptions = {}): GameApi {
   }
   updateGameOver();
   if (!options.initialBoard) persistSnapshot();
-  render();
-
-  const newGameButton = overlayEl.querySelector<HTMLButtonElement>(
-    '.overlay__button',
-  );
-  if (newGameButton) {
-    newGameButton.addEventListener('click', () => {
-      if (options.canInteract && !options.canInteract()) return;
-      if (options.onRestart) options.onRestart(); else newGame();
-    });
-  }
-
-  function mount(root: HTMLElement): void {
-    root.appendChild(hudEl);
-    root.appendChild(boardEl);
-    root.appendChild(trayEl);
-    root.appendChild(overlayEl);
-    root.appendChild(comboEl);
-  }
+  notify();
 
   function place(slotIndex: number, anchorRow: number, anchorCol: number): void {
     if (options.canInteract && !options.canInteract()) return;
@@ -274,14 +160,14 @@ export function createGame(options: GameOptions = {}): GameApi {
       audio.perfect();
     } else if (L >= 2 || newStreak >= 2) {
       audio.combo();
-      showComboCallout(newStreak);
+      options.onCombo?.(newStreak);
     } else if (L === 1) {
       audio.clear();
     } else {
       audio.place();
     }
 
-    render();
+    notify();
   }
 
   function newGame(): void {
@@ -298,8 +184,7 @@ export function createGame(options: GameOptions = {}): GameApi {
     updateGameOver();
     clearLastGame();
     persistSnapshot();
-    hideComboCallout();
-    render();
+    notify();
   }
 
   function prepareReward(): TrayOffer | null {
@@ -314,15 +199,14 @@ export function createGame(options: GameOptions = {}): GameApi {
     if (options.canInteract && !options.canInteract()) return false;
     if (offer.session !== session || offer.revision !== revision || rewardUsed || !hasAnyLegalPlacement(board, offer.pieces)) return false;
     tray = offer.pieces.slice(); rewardUsed = true; revision += 1;
-    updateGameOver(); persistSnapshot(); render(); return true;
+    updateGameOver(); persistSnapshot(); notify(); return true;
   }
   return {
-    commitRestart, prepareReward, commitReward, setPresentationPaused,
+    commitRestart, prepareReward, commitReward,
     get rewardUsed() { return rewardUsed; },
     get canReward() { return !rewardUsed && CATALOG.some(p => hasAnyLegalPlacement(board, [p])); },
     get session() { return session; },
     get revision() { return revision; },
-    mount,
     place,
     newGame,
     get boardState() {

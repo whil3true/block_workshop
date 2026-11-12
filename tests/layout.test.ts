@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeLayout, type LayoutInput, type Layout } from '../src/layout';
+import { computeLayout, type LayoutInput, type Layout } from './legacy/layout';
 
 const TOKENS = { screenPad: 12, boardPad: 6, gap: 2, minCell: 28, trayScale: 0.5 };
 

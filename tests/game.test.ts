@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 beforeEach(() => {
   localStorage.clear();
 });
-import { createGame, TRAY_SIZE, type GameApi } from '../src/game';
+import { createGame, TRAY_SIZE, type GameApi } from './legacy/game';
 import { CATALOG, sampleTray } from '../src/pieces';
 import {
   canPlace,

@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   createViewportBinder,
   createDomMeasure,
-} from '../src/viewport';
-import { computeLayout, type LayoutInput } from '../src/layout';
+} from './legacy/viewport';
+import { computeLayout, type LayoutInput } from './legacy/layout';
 
 const TOKENS = { screenPad: 12, boardPad: 6, gap: 2, minCell: 28, trayScale: 0.5 };
 

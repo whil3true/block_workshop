@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { CELL_SIZE_FALLBACK } from '../src/drag';
+import { CELL_SIZE_FALLBACK } from './legacy/drag';
 import { readCss } from './helpers';
 
 let tokens = '';

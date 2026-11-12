@@ -1,6 +1,6 @@
 import { describe,it,expect,vi } from 'vitest';
 import { createEmptyBoard, hasAnyLegalPlacement } from '../src/engine';
-import { createGame } from '../src/game';
+import { createModel as createGame } from '../src/model';
 import { loadLastGame, saveLastGame, SNAPSHOT_HEADER } from '../src/storage';
 const valid=()=>({board:createEmptyBoard(),trayIds:['single','penta-h',null],score:540,streak:2,rewardUsed:false});
 const store=(state:unknown,header:object=SNAPSHOT_HEADER)=>localStorage.setItem('block-workshop:lastGame',JSON.stringify({...header,state}));

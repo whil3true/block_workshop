@@ -30,7 +30,7 @@ SOFTWARE.
 Vite generated module-preload helper
 The production compiler can emit a small helper from Vite. Preserve the attached
 licenses/Vite-LICENSE.txt (Vite and bundled notices). Vite itself is a build-time
-dependency. There are no production npm dependencies in package.json.
+dependency. Phaser 4.2.1 is the production npm dependency (MIT); its notice is in licenses/Phaser-MIT.txt.
 
 Cozy Gallery platform/audio modules
 Source: https://github.com/whil3true/pairs_and_paths
@@ -49,3 +49,16 @@ its MIT terms. This statement does not claim exclusive copyright in AI outputs.
 
 The Yandex SDK is loaded from /sdk.js on the platform, not redistributed here.
 Full development dependency metadata: docs/dependency-inventory.json.
+
+Cozy Gallery Phaser components
+Source commit: da4a7612c870ce75d678b939a491157ae3670883
+src/phaser/Display.ts, UiPrimitives.ts, UiPolicy.ts, VisualTokens.ts,
+AudioVolumeSlider.ts and AudioVolumeSliderPolicy.ts, and src/audio/AudioRuntime.ts
+are copied/adapted with explicit project-owner authorization. The dark palette
+and game layout remain specific to Block Workshop. No donor media is included.
+
+Phaser 4.2.1
+Copyright (c) 2026 Richard Davey, Phaser Studio Inc.
+MIT license: licenses/Phaser-MIT.txt.
+The distributed framework includes its bundled third-party notices; see
+licenses/Phaser-THIRD-PARTY-NOTICES.txt.

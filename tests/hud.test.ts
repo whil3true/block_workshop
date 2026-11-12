@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHud, renderScore, renderBestScore } from '../src/hud';
+import { createHud, renderScore, renderBestScore } from './legacy/hud';
 
 describe('createHud()', () => {
   it('returns an HTMLElement with class "hud"', () => {
