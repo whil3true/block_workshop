@@ -40,7 +40,7 @@ test('first and last cells, non-single bounds, row+column simultaneous clear and
  await drag(page,1,9,5);expect((await snapshot(page)).score).toBe(336);
 });
 test('game over, menu and Play start a new session without restoring defeat',async({page},info)=>{
- const board:(string|null)[][]=Array.from({length:10},()=>Array(10).fill('sq2'));board[0]![0]=null;board[1]![1]=null;
+ const board:(string|null)[][]=Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>r===c?null:'sq2'));
  await seed(page,{board,tray:['single','square-3','square-3'],locale:'en',score:75});await open(page);await click(page,240,510);
  await drag(page,0,0,0);expect((await snapshot(page)).score).toBeGreaterThan(75);
  await page.screenshot({path:info.outputPath('game-over.png')});

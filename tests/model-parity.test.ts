@@ -5,6 +5,7 @@ import { canPlace } from '../src/engine';
 import { createSilentAudio } from '../src/audio';
 import { mulberry32 } from './helpers';
 import { boardAnchor } from '../src/phaser/BoardGeometry';
+import { saveLastGame } from '../src/storage';
 import { LocaleRuntime } from '../src/app/LocaleRuntime';
 function state(game: ModelApi) {
  return { board: game.boardState, tray: game.trayPieces.map(p => p?.id ?? null), score: game.score, best: game.bestScore,
@@ -33,6 +34,14 @@ describe('production model matches the frozen DOM controller', () => {
    model.place(slot!, row!, col!); legacy.place(slot!, row!, col!);
   }
   expect(state(model)).toEqual(state(legacy));
+ });
+ it('reaches defeat after a legal move, then commits a clean restart', () => {
+  const board = Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>r===c?null:'sq2' as const));
+  saveLastGame({board,trayIds:['single','square-3','square-3'],score:75,streak:0,rewardUsed:false});
+  const model = createModel(); expect(model.gameOver).toBe(false);model.place(0,0,0);
+  expect(model.score).toBe(106);expect(model.gameOver).toBe(true);expect(model.canReward).toBe(true);
+  model.commitRestart();expect(model.gameOver).toBe(false);expect(model.score).toBe(0);
+  expect(model.boardState.flat().every(c=>c===null)).toBe(true);
  });
  it('does not construct DOM in the production model', () => {
   const spy = vi.spyOn(document, 'createElement'); createModel(); expect(spy).not.toHaveBeenCalled(); spy.mockRestore();

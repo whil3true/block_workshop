@@ -54,13 +54,15 @@ export function mountApplication(platform: PlatformService) {
   scene?.onPauseChange(); flow.flushReward();
   if (gate.paused) platform.setGameplayActive(false);
  });
+ let prepared = false;
  let ready = false;
  // Like Cozy GameReady, wait until an interactive scene has actually rendered.
  const onRender = (): void => {
   if (ready || gate.has('sdk') || gate.has('browser') || !scene?.scene.isActive()) return;
-  ready = true; scene.setReady();
-  // Signal only after the newly enabled menu has also reached the renderer.
-  game.events.once(Phaser.Core.Events.POST_RENDER, () => platform.ready());
+  if (!prepared) { prepared = true; scene.setReady(); return; }
+  // Recheck external pause ownership on every frame, including a pause that
+  // arrives between constructing the menu and rendering its enabled state.
+  ready = true; platform.ready();
   game.events.off(Phaser.Core.Events.POST_RENDER, onRender);
  };
  game.events.on(Phaser.Core.Events.POST_RENDER, onRender);
