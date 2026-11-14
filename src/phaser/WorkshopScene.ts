@@ -18,6 +18,7 @@ import { createPrimaryButton, createSecondaryButton, createUiText, createViewpor
 import { createAudioVolumeSlider } from './AudioVolumeSlider';
 import { BOARD, TRAY, PIECE_COLORS, TILE_MATERIAL, boardAnchor } from './BoardGeometry';
 import { preloadCozyAssets, paperSurface, syncViewportPaper } from './CozyAssets';
+import { VISUAL_COLORS } from './VisualTokens';
 
 type Modal = 'settings' | 'restart' | 'reward' | 'goal' | 'campaignNotice' | null;
 export interface SceneServices {
@@ -28,6 +29,7 @@ interface ActiveDrag { pointerId: number; slot: number; piece: Piece; lift: numb
 /** Screens share exactly one SDK, audio owner, PauseGate and ad transaction controller. */
 export class WorkshopScene extends Phaser.Scene {
  private root!: Phaser.GameObjects.Container;
+ private backdrop: Phaser.GameObjects.Rectangle | null = null;
  private preview!: Phaser.GameObjects.Graphics;
  private ghost!: Phaser.GameObjects.Container;
  private effects!: Phaser.GameObjects.Container;
@@ -131,22 +133,32 @@ export class WorkshopScene extends Phaser.Scene {
   });
   this.root.add(zone);
  }
- private header(title: string, back: () => void): void {
+ private header(title: string, back: () => void, settings = true): void {
   this.surface('button-secondary',49,45,64,62); this.icon('back',49,45,30,'‹');
   this.zone('nav-back',49,45,66,66,back);
   this.text(240,45,title,'hudPrimary',300);
-  this.surface('button-secondary',431,45,64,62); this.icon('settings',431,45,30,'⚙');
-  this.zone('nav-settings',431,45,66,66,() => this.openModal('settings'));
+  if (settings) {
+   this.surface('button-secondary',431,45,64,62); this.icon('settings',431,45,30,'⚙');
+   this.zone('nav-settings',431,45,66,66,() => this.openModal('settings'));
+  }
  }
- private overlay(): void { this.root.add(createViewportBackdrop(this,0x4e4038,0.55).setInteractive()); }
+ private overlay(): void {
+  // Replace the lower dim source before drawing the topmost panel. Nested
+  // confirmations/external pauses must never multiply the paper's opacity.
+  this.backdrop?.destroy();
+  const { phaser, alpha } = VISUAL_COLORS.overlay.modal;
+  this.backdrop = createViewportBackdrop(this,phaser,alpha).setInteractive();
+  this.root.add(this.backdrop);
+ }
  private draw(): void {
-  this.dirty = false; this.root.removeAll(true);
+  this.dirty = false; this.root.removeAll(true); this.backdrop = null;
   if (this.screen === 'menu') this.drawMenu();
   else if (this.screen === 'journal') this.drawJournal();
   else this.drawPlay();
   if (this.modal) this.drawModal();
   if (this.noticeUntil > 0) this.text(240,617,this.services.locale.t('rewardUnavailable'),'caption',410);
   if (this.cover || this.externalBlock()) { this.overlay(); this.text(240,400,this.services.locale.t(this.ready ? 'paused' : 'loading'),'screenTitle'); }
+  this.effects.setVisible(this.backdrop === null);
   this.services.platform.setGameplayActive(this.screen === 'play' && !this.terminal && !this.services.gate.paused && this.ready);
  }
  private drawMenu(): void {
@@ -173,7 +185,7 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private drawJournal(): void {
   const { locale, campaign } = this.services;
-  this.header(locale.t('orders'),() => this.navigate('menu'));
+  this.header(locale.t('orders'),() => this.navigate('menu'),false);
   const chapter = CHAPTERS[this.chapter-1]!;
   const orders = CAMPAIGN_CATALOG.filter(o => chapter.orderIds.includes(o.id));
   this.text(240,112,`${locale.t('chapter')} ${chapter.number} · ${chapter.title[locale.locale]}`,'screenTitle',440);
@@ -192,11 +204,14 @@ export class WorkshopScene extends Phaser.Scene {
    this.surface('journal-card',x,y,cardWidth,120,unlocked ? 0xfff8f1 : 0xefe4d6);
    if (columns === 1) this.text(82,y-12,String(CAMPAIGN_CATALOG.indexOf(order)+1).padStart(2,'0'),'screenTitle');
    this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',columns === 1 ? 82 : x-74,y+26,28,complete ? '✓' : unlocked ? '›' : '•');
-   this.text(textX,y-29,order.title[locale.locale],'body',textWidth);
-   this.text(textX,y+6,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',textWidth,complete ? '#5B704D' : '#7A6A60');
+   const title = this.text(0,-32,order.title[locale.locale],'body',textWidth);
+   const state = this.text(0,0,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',textWidth,complete ? '#5B704D' : '#7A6A60');
    const current = campaign.active?.orderId === order.id ? campaign.active : null;
    const progress = current ? `${locale.t('removed')}: ${orderProgress(order.fragments,current.remainingTargets).removed}/${orderProgress(order.fragments,current.remainingTargets).total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
-   this.text(textX,y+36,progress,'caption',textWidth,'#98513F');
+   const detail = this.text(0,30,progress,'caption',textWidth,'#98513F');
+   const copy = this.add.container(textX,y,[title,state,detail]); this.root.add(copy);
+   // Center the measured copy as one group; exclude the raster's bottom shadow.
+   copy.y += y - 3 - copy.getBounds().centerY;
    this.zone(`order-${index+1}`,x,y,cardWidth,120,() => this.startOrder(order.id),!unlocked);
   });
   this.text(240,667,locale.t('future'),'caption',420,'#7A6A60');
@@ -216,7 +231,7 @@ export class WorkshopScene extends Phaser.Scene {
   if (this.mode === 'classic') {
    for (const [x,word,value] of [[126,'score',model.score],[354,'best',model.bestScore]] as const) {
     this.surface('panel',x,114,212,62);
-    const label = this.text(x-84,111,locale.t(word),'caption',0,'#7A6A60').setOrigin(0,0.5);
+    const label = this.text(x-84,113,locale.t(word),'caption',0,'#7A6A60').setOrigin(0,0.5);
     const amount = this.text(x+84,114,this.formatScore(value),'hudPrimary').setOrigin(1,0.5);
     // Keep a single line and a real gap for both locales, even for six-digit scores.
     const valueWidth = 168-label.width-12;
@@ -229,12 +244,14 @@ export class WorkshopScene extends Phaser.Scene {
    order.fragments.forEach((fragment,i) => {
     const x = 8 + width/2 + i*(width+6), progress = fragmentProgress(fragment,active.remainingTargets);
     this.surface('order-card',x,113,width,66);
-    // Reserve distinct miniature and copy columns, with at least 12px outer padding.
-    const contentWidth = Math.min(width-24,136), contentLeft = x-contentWidth/2;
-    this.drawFragment(fragment,contentLeft+20,113,40);
-    const labelWidth = contentWidth-48, labelX = contentLeft+48+labelWidth/2;
+    // Balance both columns within the capsule, leaving 20px corner clearance
+    // even with three goals. A smaller silhouette frees equal outer margins.
+    const contentWidth = Math.min(width-40,128), contentLeft = x-contentWidth/2;
+    this.drawFragment(fragment,contentLeft+16,113,32);
+    const labelWidth = contentWidth-40, labelX = contentLeft+40+labelWidth/2;
     this.text(labelX,101,`${fragment.id} · ${progress.removed}/${progress.total}`,'body',labelWidth,progress.remaining ? '#4E4038' : '#5B704D').setFontSize(19);
-    this.text(labelX,124,locale.t(progress.remaining ? 'removed' : 'completed'),'caption',labelWidth,progress.remaining ? '#7A6A60' : '#5B704D').setFontSize(15);
+    const state = this.text(labelX,124,locale.t(progress.remaining ? 'removed' : 'completed'),'caption',0,progress.remaining ? '#7A6A60' : '#5B704D').setFontSize(15);
+    if (state.width > labelWidth) state.setScale(labelWidth/state.width);
     this.zone(`goal-${fragment.id}`,x,113,width,66,() => { this.selectedFragment=fragment.id; this.openModal('goal'); });
    });
   }
@@ -290,6 +307,7 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private drawClassicOver(): void {
   const { locale, model, platform } = this.services;
+  this.overlay();
   this.root.add(createModalShell(this,{x:240,y:400,width:440,height:438}));
   this.text(240,270,locale.t('gameOver'),'screenTitle',400);
   this.text(240,327,`${locale.t('score')}: ${this.formatScore(model.score)}`,'hudPrimary');
@@ -301,6 +319,7 @@ export class WorkshopScene extends Phaser.Scene {
   const { campaign, locale } = this.services, active = campaign.active!;
   const success = active.status === 'succeeded', order = findOrder(active.orderId)!, index = CAMPAIGN_CATALOG.indexOf(order);
   const next = CAMPAIGN_CATALOG[index+1];
+  this.overlay();
   this.root.add(createModalShell(this,{x:240,y:416,width:440,height:560}));
   if (success) this.icon('stamp',240,237,116,'✓'); else this.icon('retry',240,237,70,'↻');
   this.text(240,328,locale.t(success ? next ? 'orderDone' : 'sliceDone' : 'gameOver'),'screenTitle',390);
@@ -333,6 +352,7 @@ export class WorkshopScene extends Phaser.Scene {
  private closeModal(): void { this.modal=null; this.offering=null; this.services.gate.set('manual',false); this.invalidate(); }
  private drawModal(): void {
   const { locale, manager } = this.services;
+  this.overlay();
   this.root.add(createModalShell(this,{x:240,y:400,width:440,height:this.modal === 'settings' || this.modal === 'goal' ? 640 : 360}));
   if (this.modal === 'settings') {
    this.text(240,124,locale.t('settings'),'screenTitle'); this.text(240,178,locale.t('language'));
