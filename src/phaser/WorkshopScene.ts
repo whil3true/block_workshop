@@ -232,7 +232,7 @@ export class WorkshopScene extends Phaser.Scene {
   this.surface('board-frame',240,376,456,456,0xd8c9b7);
   const graphics = this.add.graphics(); this.root.add(graphics);
   for (let r=0;r<10;r++) for (let c=0;c<10;c++) this.tile(this.root,graphics,this.board[r]![c]!,BOARD.x+c*44,BOARD.y+r*44,44);
-  if (this.mode === 'campaign' && active?.status === 'running') this.drawTargets();
+  if (this.mode === 'campaign' && active) this.drawTargets();
   if (this.comboRemaining > 0 && this.mode === 'classic') this.text(240,612,`${locale.t('combo')} ×${this.combo}`,'caption');
   this.pieces.forEach((piece,slot) => {
    this.surface('panel',TRAY.centers[slot]!,TRAY.y,140,112,0xefe4d6);
