@@ -13,7 +13,7 @@ test('three orders through real Canvas drag, partial-tray reload, results, indep
  // This journey plays all three orders, reloads twice and returns to classic.
  // Hosted Chromium software WebGL exceeds the ordinary single-screen 60s budget.
  // Keep assertion timeouts unchanged; only budget the complete user journey.
- test.setTimeout(120_000);
+ test.setTimeout(180_000);
  await seed(page,{locale:'ru',score:17});await open(page);const classicBefore=await snapshot(page);
  await page.screenshot({path:info.outputPath('menu-ru.png')});
  await click(page,240,412);await page.screenshot({path:info.outputPath('journal-ru.png')});
