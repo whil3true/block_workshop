@@ -174,7 +174,7 @@ export const createCard = (scene: Phaser.Scene, options: PanelOptions): Phaser.G
   return graphics;
 };
 
-/** Covers background-only world space exposed by EXPAND, including tablet sides. */
+/** The sole dim source: a Canvas rectangle covering the complete browser viewport. */
 export const createViewportBackdrop = (
   scene: Phaser.Scene,
   color: number,
@@ -182,9 +182,10 @@ export const createViewportBackdrop = (
 ): Phaser.GameObjects.Rectangle => {
   const backdrop = scene.add.rectangle(
     LOGICAL_GAME_WIDTH / 2, LOGICAL_GAME_HEIGHT / 2, 1, 1, color, alpha,
-  );
+  ).setName('viewport-backdrop');
   const syncSize = (): void => {
-    const { zoom } = scene.cameras.main;
+    const { zoom, scrollX, scrollY, width, height } = scene.cameras.main;
+    backdrop.setPosition(scrollX + width/2, scrollY + height/2);
     backdrop.setSize(scene.scale.gameSize.width / zoom, scene.scale.gameSize.height / zoom);
   };
   syncSize();
@@ -195,10 +196,9 @@ export const createViewportBackdrop = (
   return backdrop;
 };
 
+// A shell never owns dimming. The scene inserts exactly one backdrop below
+// its topmost panel, even when a result, confirmation and external pause overlap.
 export const createModalShell = (scene: Phaser.Scene, options: PanelOptions): Phaser.GameObjects.Container => {
-  const backdrop = createViewportBackdrop(
-    scene, VISUAL_COLORS.overlay.modal.phaser, VISUAL_COLORS.overlay.modal.alpha,
-  ).setInteractive();
   const panel = paperSurface(scene, 'modal', options.x, options.y, options.width, options.height, VISUAL_COLORS.surface.elevated.phaser);
-  return scene.add.container(0, 0, [backdrop, panel]);
+  return scene.add.container(0, 0, [panel]);
 };

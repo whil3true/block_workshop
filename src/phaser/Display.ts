@@ -22,10 +22,8 @@ export interface PortraitFrame {
 }
 
 /**
- * Describes the production Phaser.Scale.EXPAND contract with canvas width
- * capped at the canonical portrait width. Wide viewports therefore retain
- * desktop side gutters, while normal tall-mobile viewports extend the Phaser
- * canvas vertically instead of exposing CSS gutters above and below it.
+ * Describes the centered portrait composition inside the full-viewport Canvas.
+ * Gutters are background-only world space, rendered by the same compositor.
  */
 export const computePortraitFrame = (
   viewportWidth: number,
@@ -118,19 +116,26 @@ export const selectStartupRenderScale = (
 const logicalCameraResizeHandlers = new WeakMap<Phaser.Scene, () => void>();
 
 /**
- * Keeps the immutable 480x800 production composition centered inside the
- * adaptive Phaser viewport. EXPAND may reveal background-only world space
- * above/below on tall phones, while renderScale still supplies HiDPI backing
- * pixels.
+ * Keeps the immutable 480x800 composition inside the safe area of the
+ * full-viewport EXPAND Canvas. Background-only world space surrounds it.
  */
 export const configureLogicalCamera = (scene: Phaser.Scene, renderScale: number): void => {
   const existing = logicalCameraResizeHandlers.get(scene);
   if (existing !== undefined) scene.scale.off(Phaser.Scale.Events.RESIZE, existing);
 
   const syncCamera = (): void => {
+    const style = getComputedStyle(document.body);
+    const inset = (edge: string): number => parseFloat(style.getPropertyValue(`--safe-${edge}`)) || 0;
+    const left = inset('left'), right = inset('right'), top = inset('top'), bottom = inset('bottom');
+    const { width, height } = scene.scale.displaySize;
+    const fit = Math.min(Math.max(1, width-left-right)/LOGICAL_GAME_WIDTH, Math.max(1, height-top-bottom)/LOGICAL_GAME_HEIGHT);
+    const fullFit = Math.min(width/LOGICAL_GAME_WIDTH, height/LOGICAL_GAME_HEIGHT);
+    const zoom = renderScale * fit / fullFit;
+    const pixelsPerCssPixel = scene.scale.gameSize.width / width;
     scene.cameras.main
-      .setZoom(renderScale)
-      .centerOn(LOGICAL_GAME_WIDTH / 2, LOGICAL_GAME_HEIGHT / 2);
+      .setZoom(zoom)
+      .centerOn(LOGICAL_GAME_WIDTH / 2 - (left-right)*pixelsPerCssPixel/(2*zoom),
+        LOGICAL_GAME_HEIGHT / 2 - (top-bottom)*pixelsPerCssPixel/(2*zoom));
   };
 
   logicalCameraResizeHandlers.set(scene, syncCamera);

@@ -15,8 +15,14 @@ export async function snapshot(page: Page) {
 }
 export async function point(page: Page, x: number, y: number) {
  const box = await page.locator('canvas').boundingBox(); if (!box) throw Error('Canvas is missing');
- const scale = box.width / 480;
- return { x: box.x + x * scale, y: box.y + box.height / 2 + (y - 400) * scale };
+ const insets = await page.evaluate(() => {
+  const style = getComputedStyle(document.body);
+  const edge = (name: string): number => parseFloat(style.getPropertyValue(`--safe-${name}`)) || 0;
+  return {left:edge('left'),right:edge('right'),top:edge('top'),bottom:edge('bottom')};
+ });
+ const scale = Math.min((box.width-insets.left-insets.right)/480,(box.height-insets.top-insets.bottom)/800);
+ return { x: box.x + (box.width+insets.left-insets.right)/2 + (x-240)*scale,
+  y: box.y + (box.height+insets.top-insets.bottom)/2 + (y-400)*scale };
 }
 export async function click(page: Page, x: number, y: number) {
  const p = await point(page,x,y); await page.mouse.click(p.x,p.y); await frames(page);
