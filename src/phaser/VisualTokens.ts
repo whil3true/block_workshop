@@ -6,18 +6,18 @@ const color = (hex: `#${string}`, alpha = 1) => Object.freeze({
 });
 
 export const VISUAL_COLORS = Object.freeze({
-  bg: Object.freeze({ app: color("#0F172A") }),
-  surface: Object.freeze({ elevated: color("#334155"), card: color("#1E293B"), board: color("#1E293B") }),
+  bg: Object.freeze({ app: color("#F6EFE6") }),
+  surface: Object.freeze({ elevated: color("#EFE4D6"), card: color("#FFF8F1"), board: color("#FFF8F1") }),
   primary: Object.freeze({
-    action: color("#0284C7"), actionHover: color("#0369A1"),
-    actionPressed: color("#075985"), actionDisabled: color("#334155"),
+    action: color("#A35F4C"), actionHover: color("#98513F"),
+    actionPressed: color("#864534"), actionDisabled: color("#EFE4D6"),
   }),
-  text: Object.freeze({ primary: color("#F1F5F9"), secondary: color("#CBD5E1"), tertiary: color("#94A3B8") }),
-  accent: Object.freeze({ coral: color("#C96E5B"), gold: color("#38BDF8") }),
+  text: Object.freeze({ primary: color("#4E4038"), secondary: color("#7A6A60"), tertiary: color("#7A6A60") }),
+  accent: Object.freeze({ coral: color("#C96E5B"), gold: color("#B88E4F") }),
   state: Object.freeze({
-    success: color("#2D7464"), locked: color("#7C8685"), lockedFill: color("#334155"),
+    success: color("#2D7464"), locked: color("#7C8685"), lockedFill: color("#EFE4D6"),
     selectedFill: color("#D7E8E3"), hint: color("#C98519"), hintFill: color("#F2DDB5"),
-    danger: color("#A5423F"), pressedFill: color("#334155"),
+    danger: color("#A5423F"), pressedFill: color("#EFE4D6"),
   }),
   // Level Select only: warmer state palette; shared gameplay success/route colors remain untouched.
   levelSelect: Object.freeze({
@@ -33,17 +33,17 @@ export const VISUAL_COLORS = Object.freeze({
   }),
   route: Object.freeze({ core: color("#0B7475"), halo: color("#FFF3D2") }),
   blocker: Object.freeze({ fill: color("#62645E"), dark: color("#3F4543"), relief: color("#ECE4D3") }),
-  border: Object.freeze({ strong: color("#64748B"), soft: color("#C9BEAA") }),
-  divider: color("#475569"),
-  overlay: Object.freeze({ modal: color("#0F172A", 0.72) }),
+  border: Object.freeze({ strong: color("#C9BEAA"), soft: color("#C9BEAA") }),
+  divider: color("#D8C9B7"),
+  overlay: Object.freeze({ modal: color("#4E4038", 0.48) }),
   white: color("#FFFFFF"),
-  disabledLabel: color("#94A3B8"),
-  secondaryHover: color("#334155"),
-  secondaryPressed: color("#475569"),
+  disabledLabel: color("#7A6A60"),
+  secondaryHover: color("#EFE4D6"),
+  secondaryPressed: color("#D8C9B7"),
 });
 
-export const FONT_DISPLAY_FAMILY = 'Arial, sans-serif';
-export const FONT_UI_FAMILY = 'Arial, sans-serif';
+export const FONT_DISPLAY_FAMILY = 'Nunito, sans-serif';
+export const FONT_UI_FAMILY = 'Nunito, sans-serif';
 
 export type TypographyFamilyRole = "display" | "ui";
 
@@ -58,17 +58,17 @@ const typeRole = (
 
 export const TYPOGRAPHY = Object.freeze({
   displayBrand: typeRole("ui", 600, 38, 44, -0.4, "center"),
-  brandDescriptor: typeRole("ui", 500, 15, 20, 0.1, "center"),
-  screenTitle: typeRole("ui", 600, 30, 36, -0.3, "center"),
+  brandDescriptor: typeRole("ui", 600, 19, 24, 0.1, "center"),
+  screenTitle: typeRole("ui", 800, 30, 38, -0.3, "center"),
   chapterHeading: typeRole("ui", 600, 24, 30, -0.2, "center"),
   sectionHeading: typeRole("ui", 600, 22, 28),
   levelTitle: typeRole("ui", 600, 20, 26),
-  hudPrimary: typeRole("ui", 600, 20, 24),
+  hudPrimary: typeRole("ui", 800, 25, 30),
   hudSecondary: typeRole("ui", 500, 16, 20),
-  buttonPrimary: typeRole("ui", 600, 19, 24, 0, "center"),
-  buttonSecondary: typeRole("ui", 600, 17, 22, 0, "center"),
-  body: typeRole("ui", 400, 17, 24),
-  caption: typeRole("ui", 500, 15, 20, 0.1),
+  buttonPrimary: typeRole("ui", 800, 24, 30, 0, "center"),
+  buttonSecondary: typeRole("ui", 700, 22, 28, 0, "center"),
+  body: typeRole("ui", 600, 22, 28),
+  caption: typeRole("ui", 600, 19, 24, 0.1),
   smallMetadata: typeRole("ui", 500, 14, 18, 0.1),
 });
 export type TypographyRole = keyof typeof TYPOGRAPHY;

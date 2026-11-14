@@ -62,3 +62,7 @@ Copyright (c) 2026 Richard Davey, Phaser Studio Inc.
 MIT license: licenses/Phaser-MIT.txt.
 The distributed framework includes its bundled third-party notices; see
 licenses/Phaser-THIRD-PARTY-NOTICES.txt.
+
+Nunito variable font — SIL Open Font License 1.1.
+Source: https://github.com/google/fonts/tree/main/ofl/nunito
+See licenses/OFL-Nunito.txt.

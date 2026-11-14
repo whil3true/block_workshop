@@ -13,14 +13,15 @@ export class AdFlow<T extends RewardOffer> {
   restart: () => void; applyReward: (offer: T) => boolean;
  }) {}
  get busy(): boolean { return this.pending || this.staged !== null; }
- async restart(): Promise<void> {
+ async restart(): Promise<void> { return this.transition(this.deps.restart); }
+ async transition(destination: () => void, showAd = true): Promise<void> {
   if (this.disposed || this.busy || this.deps.gate.paused) return;
   this.pending = true;
   this.deps.gate.set('transition', true);
   try {
-   try { await this.deps.interstitial.tryShow(() => this.deps.cover(true)); } catch { /* no-fill/error still reaches destination */ }
+   try { if (showAd) await this.deps.interstitial.tryShow(() => this.deps.cover(true)); } catch { /* no-fill/error still reaches destination */ }
    if (this.disposed) return;
-   this.deps.restart(); // Destination exists immediately after close/error, even while SDK-paused.
+   destination(); // Destination exists immediately after close/error, even while SDK-paused.
    await this.deps.afterFrame();
   } finally {
    this.deps.cover(false);

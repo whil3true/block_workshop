@@ -45,7 +45,7 @@ export const resolveButtonVisual = (kind: ButtonKind, state: ButtonState): Butto
   if (kind === "primary") return {
     fill: state === "pressed" ? c.primary.actionPressed.phaser
       : state === "hover" ? c.primary.actionHover.phaser : c.primary.action.phaser,
-    fillAlpha: 1, label: c.text.primary.hex, border: c.primary.actionPressed.phaser, borderWidth: 0,
+    fillAlpha: 1, label: "#FFF8F1", border: c.primary.actionPressed.phaser, borderWidth: 0,
     offsetY: state === "pressed" ? 2 : state === "hover" ? -1 : 0, focusRing: state === "focus",
   };
   if (kind === "secondary") return {

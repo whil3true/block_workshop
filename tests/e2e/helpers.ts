@@ -24,8 +24,9 @@ export async function click(page: Page, x: number, y: number) {
 export async function frames(page: Page) {
  await page.evaluate(() => new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
 }
-export async function open(page: Page, url = '/') {
+export async function open(page: Page, url = '/', waitForReady = true) {
  await page.goto(url); await expect(page.locator('canvas')).toBeVisible();
+ if(waitForReady) await expect(page.locator('canvas')).toHaveAttribute('aria-busy','false');
  // Initial scene render + ready menu render, without a production debug hook.
  await frames(page); await frames(page);
 }

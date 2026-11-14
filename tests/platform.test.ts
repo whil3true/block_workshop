@@ -114,3 +114,10 @@ describe('explicit standalone policy and failed bootstrap', () => {
   await expect(p).rejects.toThrow('unavailable');expect(document.contains(script)).toBe(false);
  });
 });
+
+it('a campaign destination uses the shared transaction without restarting classic or showing an ad',async()=>{
+ const gate=new PauseGate(), destination=vi.fn(), restart=vi.fn(), ad=vi.fn(async()=>false);
+ const flow=new AdFlow({gate,platform:new WebPlatform('ru'),interstitial:{tryShow:ad},restart,applyReward:()=>false,cover:()=>{},afterFrame:async()=>{}});
+ await flow.transition(destination,false);
+ expect(destination).toHaveBeenCalledTimes(1);expect(restart).not.toHaveBeenCalled();expect(ad).not.toHaveBeenCalled();expect(gate.paused).toBe(false);
+});

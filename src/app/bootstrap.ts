@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { CampaignController } from '../campaign/CampaignSession';
 import { createModel, type TrayOffer } from '../model';
 import { createPlatform } from '../platform/createPlatform';
 import type { PlatformService } from '../platform/PlatformService';
@@ -20,7 +21,9 @@ import { computeRenderScale, selectStartupRenderScale, isDesktopBrowserUserAgent
 export const afterFrame = (): Promise<void> => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 export async function boot(platformFactory = createPlatform) {
  // Initialize SDK and retain startup events before constructing Phaser/audio.
- return mountApplication(await platformFactory());
+ const platform = await platformFactory();
+ await document.fonts.load('700 24px Nunito').catch(() => {});
+ return mountApplication(platform);
 }
 export function mountApplication(platform: PlatformService) {
  const gate = new PauseGate(); gate.set('startup', true); gate.set('sdk', platform.isPaused);
@@ -37,13 +40,14 @@ export function mountApplication(platform: PlatformService) {
  const audio = gameAudio(manager, () => {}); audio.setMuted(false);
  const model = createModel({ audio, canInteract: () => !gate.paused,
   onChange: () => scene?.invalidate(), onCombo: streak => scene?.showCombo(streak) });
+ const campaign = new CampaignController(() => scene?.invalidate(), () => !gate.paused);
  const flow = new AdFlow<TrayOffer>({ gate, platform, interstitial: new InterstitialController(platform),
   cover: visible => scene?.setCover(visible), afterFrame,
   restart: () => model.commitRestart(), applyReward: offer => model.commitReward(offer) });
  const density = selectStartupRenderScale(computeRenderScale(window.devicePixelRatio || 1, window.innerWidth, window.innerHeight), isDesktopBrowserUserAgent(navigator.userAgent, navigator.maxTouchPoints));
- scene = new WorkshopScene({ model, gate, locale, manager, audio, platform, flow, density });
+ scene = new WorkshopScene({ model, campaign, gate, locale, manager, audio, platform, flow, density });
  const game = new Phaser.Game({
-  type: Phaser.AUTO, parent: 'app', backgroundColor: '#0f172a', scene: [scene],
+  type: Phaser.AUTO, parent: 'app', backgroundColor: '#F6EFE6', scene: [scene],
   audio: { noAudio: true }, // The shared Cozy audio lifecycle owns media and Web Audio.
   input: { activePointers: 2 },
   scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.NO_CENTER, expandParent: false,

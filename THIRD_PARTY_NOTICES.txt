@@ -62,3 +62,8 @@ Copyright (c) 2026 Richard Davey, Phaser Studio Inc.
 MIT license: licenses/Phaser-MIT.txt.
 The distributed framework includes its bundled third-party notices; see
 licenses/Phaser-THIRD-PARTY-NOTICES.txt.
+
+Nunito variable font (self-hosted WOFF2 conversion)
+Source: https://github.com/google/fonts/tree/main/ofl/nunito
+License: SIL Open Font License 1.1; see public/licenses/OFL-Nunito.txt.
+No media from Cozy Gallery was copied for the Paper Mosaic art pack.
