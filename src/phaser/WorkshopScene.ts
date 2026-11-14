@@ -110,7 +110,10 @@ export class WorkshopScene extends Phaser.Scene {
  private icon(key: string, x: number, y: number, size = 32, fallback = ''): void {
   if (this.textures.exists(`cozy-${key}`)) {
    const image = this.add.image(x,y,`cozy-${key}`,key === 'back' ? 'centered' : undefined);
-   image.setDisplaySize(key === 'back' ? size*70/81 : size,size); this.root.add(image);
+   image.setDisplaySize(key === 'back' ? size*70/81 : size,size);
+   // The cropped arrow carries more ink on the left; balance its visual weight.
+   if (key === 'back') image.x += 1.5;
+   this.root.add(image);
   }
   else if (fallback) this.text(x,y,fallback,'body');
  }
@@ -155,9 +158,10 @@ export class WorkshopScene extends Phaser.Scene {
   const modeCard = (key: string, y: number, icon: string, title: Word, subtitle: string, resume: boolean, action: () => void): void => {
    this.surface(key === 'orders' ? 'order-card' : 'journal-card',240,y,416,144);
    this.icon(icon,82,y,46,key === 'orders' ? '▤' : '▷');
-   this.text(267,y-39,locale.t(title),'screenTitle',308);
-   this.text(267,y+1,subtitle,'caption',298,'#7A6A60');
-   this.text(267,y+39,locale.t(resume ? 'resume' : 'play'),'body',298,'#98513F');
+   // Center the copy on the card, independently of the decorative left icon.
+   this.text(240,y-39,locale.t(title),'screenTitle',252);
+   this.text(240,y+1,subtitle,'caption',252,'#7A6A60');
+   this.text(240,y+39,locale.t(resume ? 'resume' : 'play'),'body',252,'#98513F');
    this.zone(key,240,y,416,144,action);
   };
   modeCard('orders',412,'book','orders',`${locale.t('chapter')} ${this.chapter} · ${campaign.completed.length}/${CAMPAIGN_CATALOG.length}`,campaign.active?.status === 'running',() => this.navigate('journal'));
@@ -212,8 +216,11 @@ export class WorkshopScene extends Phaser.Scene {
   if (this.mode === 'classic') {
    for (const [x,word,value] of [[126,'score',model.score],[354,'best',model.bestScore]] as const) {
     this.surface('panel',x,114,212,62);
-    this.text(x-58,111,locale.t(word),'caption',95,'#7A6A60');
-    this.text(x+35,115,this.formatScore(value),'hudPrimary',125);
+    const label = this.text(x-84,114,locale.t(word),'caption',0,'#7A6A60').setOrigin(0,0.5);
+    const amount = this.text(x+84,114,this.formatScore(value),'hudPrimary').setOrigin(1,0.5);
+    // Keep a single line and a real gap for both locales, even for six-digit scores.
+    const valueWidth = 168-label.width-12;
+    if (amount.width > valueWidth) amount.setScale(valueWidth/amount.width);
    }
   } else if (active) {
    const order = findOrder(active.orderId)!;
