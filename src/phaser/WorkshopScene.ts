@@ -111,8 +111,8 @@ export class WorkshopScene extends Phaser.Scene {
   if (this.textures.exists(`cozy-${key}`)) {
    const image = this.add.image(x,y,`cozy-${key}`,key === 'back' ? 'centered' : undefined);
    image.setDisplaySize(key === 'back' ? size*70/81 : size,size);
-   // The cropped arrow carries more ink on the left; balance its visual weight.
-   if (key === 'back') image.x += 1.5;
+   // Optical adjustment of the cropped glyph only; keep the surface and hit-area fixed.
+   if (key === 'back') image.x -= 1;
    this.root.add(image);
   }
   else if (fallback) this.text(x,y,fallback,'body');
@@ -216,7 +216,7 @@ export class WorkshopScene extends Phaser.Scene {
   if (this.mode === 'classic') {
    for (const [x,word,value] of [[126,'score',model.score],[354,'best',model.bestScore]] as const) {
     this.surface('panel',x,114,212,62);
-    const label = this.text(x-84,114,locale.t(word),'caption',0,'#7A6A60').setOrigin(0,0.5);
+    const label = this.text(x-84,111,locale.t(word),'caption',0,'#7A6A60').setOrigin(0,0.5);
     const amount = this.text(x+84,114,this.formatScore(value),'hudPrimary').setOrigin(1,0.5);
     // Keep a single line and a real gap for both locales, even for six-digit scores.
     const valueWidth = 168-label.width-12;
@@ -224,16 +224,18 @@ export class WorkshopScene extends Phaser.Scene {
    }
   } else if (active) {
    const order = findOrder(active.orderId)!;
-   this.text(240,74,`${locale.t('targetsLeft')}: ${active.remainingTargets.length}`,'caption',300,'#98513F').setFontSize(16);
-   const width = (448 - (order.fragments.length-1)*8)/order.fragments.length;
+   this.text(240,68,`${locale.t('targetsLeft')}: ${active.remainingTargets.length}`,'caption',300,'#98513F').setFontSize(16);
+   const width = (464 - (order.fragments.length-1)*6)/order.fragments.length;
    order.fragments.forEach((fragment,i) => {
-    const x = 16 + width/2 + i*(width+8), progress = fragmentProgress(fragment,active.remainingTargets);
-    this.surface('order-card',x,117,width,60);
-    this.drawFragment(fragment,x-Math.min(width-24,140)/2+20,117,40);
-    const labelX = x+18, labelWidth = width-53;
-    this.text(labelX,106,`${fragment.id} · ${progress.removed}/${progress.total}`,'body',labelWidth,progress.remaining ? '#4E4038' : '#5B704D').setFontSize(19);
-    this.text(labelX,129,locale.t(progress.remaining ? 'removed' : 'completed'),'caption',labelWidth,progress.remaining ? '#7A6A60' : '#5B704D').setFontSize(15);
-    this.zone(`goal-${fragment.id}`,x,117,width,60,() => { this.selectedFragment=fragment.id; this.openModal('goal'); });
+    const x = 8 + width/2 + i*(width+6), progress = fragmentProgress(fragment,active.remainingTargets);
+    this.surface('order-card',x,113,width,66);
+    // Reserve distinct miniature and copy columns, with at least 12px outer padding.
+    const contentWidth = Math.min(width-24,136), contentLeft = x-contentWidth/2;
+    this.drawFragment(fragment,contentLeft+20,113,40);
+    const labelWidth = contentWidth-48, labelX = contentLeft+48+labelWidth/2;
+    this.text(labelX,101,`${fragment.id} · ${progress.removed}/${progress.total}`,'body',labelWidth,progress.remaining ? '#4E4038' : '#5B704D').setFontSize(19);
+    this.text(labelX,124,locale.t(progress.remaining ? 'removed' : 'completed'),'caption',labelWidth,progress.remaining ? '#7A6A60' : '#5B704D').setFontSize(15);
+    this.zone(`goal-${fragment.id}`,x,113,width,66,() => { this.selectedFragment=fragment.id; this.openModal('goal'); });
    });
   }
   this.surface('board-frame',240,376,456,456,0xd8c9b7);
