@@ -81,10 +81,10 @@ describe('DOM application lifecycle',()=>{
  it('never reintroduces English game labels after placement in a Russian session',async()=>{
   html();app=mountApplication(new WebPlatform('en'),async()=>{});await settle();
   app.locale.set('ru');start();
-  expect(document.querySelector('.hud__pair--current .hud__label')?.textContent).toBe('СЧЁТ');
+  expect(document.querySelector('.hud__pair--current .hud__label')?.textContent).toBe('Счёт');
   app.game.place(0,0,0);
-  expect(document.querySelector('.hud__pair--current .hud__label')?.textContent).toBe('СЧЁТ');
-  expect(document.querySelector('.hud__pair--best .hud__label')?.textContent).toBe('РЕКОРД');
+  expect(document.querySelector('.hud__pair--current .hud__label')?.textContent).toBe('Счёт');
+  expect(document.querySelector('.hud__pair--best .hud__label')?.textContent).toBe('Рекорд');
   expect(document.querySelector('.overlay__heading')?.textContent).toBe('Нет доступных ходов');
   expect(document.querySelector('.overlay__button')?.textContent).toBe('Новая игра');
  });

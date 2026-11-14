@@ -1,0 +1,318 @@
+{
+  "pack": "cozy-mosaic",
+  "version": 1,
+  "logicalComposition": [
+    480,
+    800
+  ],
+  "assets": [
+    {
+      "key": "paper",
+      "path": "public/assets/cozy-mosaic/paper.webp",
+      "width": 512,
+      "height": 512,
+      "purpose": "Full viewport background; warm handmade paper",
+      "sha256": "bd281e72fb91a2246956669b14d46aa9622e9e57489ccf9e21557cab136b3814"
+    },
+    {
+      "key": "tile-apricot",
+      "path": "public/assets/cozy-mosaic/tile-apricot.webp",
+      "width": 128,
+      "height": 128,
+      "purpose": "Board, tray and dragged tile material",
+      "sha256": "aa6c23ab8ad853c5c3eee8af4a2c9179796c747e8319ed3ea9a34dad8b69c3b3"
+    },
+    {
+      "key": "tile-sage",
+      "path": "public/assets/cozy-mosaic/tile-sage.webp",
+      "width": 128,
+      "height": 128,
+      "purpose": "Board, tray and dragged tile material",
+      "sha256": "ab0dd6e0ced64b987979335ab2c4ec5cfc7d0c305af58741d076874ed1402918"
+    },
+    {
+      "key": "tile-honey",
+      "path": "public/assets/cozy-mosaic/tile-honey.webp",
+      "width": 128,
+      "height": 128,
+      "purpose": "Board, tray and dragged tile material",
+      "sha256": "8f249b1b66cf50cde5a28e81163dfed9ad41e17be22d0935bf63396564d5273d"
+    },
+    {
+      "key": "tile-lilac",
+      "path": "public/assets/cozy-mosaic/tile-lilac.webp",
+      "width": 128,
+      "height": 128,
+      "purpose": "Board, tray and dragged tile material",
+      "sha256": "6a313d55ee455149a5201cf5e4c00fea8845dbe589c7a0d09b782156b42b9e8b"
+    },
+    {
+      "key": "tile-blush",
+      "path": "public/assets/cozy-mosaic/tile-blush.webp",
+      "width": 128,
+      "height": 128,
+      "purpose": "Board, tray and dragged tile material",
+      "sha256": "dec9c8ff17de6c3e9cf3eeb4f151732c4cd5074646a60b7c6007e13d0ce6a5b7"
+    },
+    {
+      "key": "tile-eucalyptus",
+      "path": "public/assets/cozy-mosaic/tile-eucalyptus.webp",
+      "width": 128,
+      "height": 128,
+      "purpose": "Board, tray and dragged tile material",
+      "sha256": "8d60b9fd84cadd1db06a58bbedbc0f5eae3154c57638e85b9c56038ca0aadebd"
+    },
+    {
+      "key": "cell-empty",
+      "path": "public/assets/cozy-mosaic/cell-empty.webp",
+      "width": 128,
+      "height": 128,
+      "purpose": "Empty board cell, decorative only",
+      "sha256": "7a8141970c909a3dfae7c0244994e7057dfed8a56c46f74e1869a836cbdc4cf9"
+    },
+    {
+      "key": "button-primary",
+      "path": "public/assets/cozy-mosaic/button-primary.webp",
+      "width": 512,
+      "height": 144,
+      "purpose": "Reusable button surface and interaction state",
+      "sha256": "b07624cd9f9b812828b037da29a6c77e075db4d5d2b37c291c4885a3a5964adf",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "button-pressed",
+      "path": "public/assets/cozy-mosaic/button-pressed.webp",
+      "width": 512,
+      "height": 144,
+      "purpose": "Reusable button surface and interaction state",
+      "sha256": "1f391ae239b2cd257c9aa5b52134e8e8f4f8262e50c08f6f8a2f7269a03e9b10",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "button-secondary",
+      "path": "public/assets/cozy-mosaic/button-secondary.webp",
+      "width": 512,
+      "height": 144,
+      "purpose": "Reusable button surface and interaction state",
+      "sha256": "6a0356c1222afe784921fce7b657386146a40725a5a5f8e9906da8250b3099d5",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "button-disabled",
+      "path": "public/assets/cozy-mosaic/button-disabled.webp",
+      "width": 512,
+      "height": 144,
+      "purpose": "Reusable button surface and interaction state",
+      "sha256": "2a1cdfafb9974c9e4668b58d5011348006229e61c75330c33e6addb7f1ac737c",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "panel",
+      "path": "public/assets/cozy-mosaic/panel.webp",
+      "width": 512,
+      "height": 256,
+      "purpose": "Reusable paper panel",
+      "sha256": "b8b27e8a74b0bc3bdafc54c673b01efe5223ddccf0a730da036b77f626a95cc2",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "order-card",
+      "path": "public/assets/cozy-mosaic/order-card.webp",
+      "width": 512,
+      "height": 256,
+      "purpose": "Reusable paper order-card",
+      "sha256": "b8b27e8a74b0bc3bdafc54c673b01efe5223ddccf0a730da036b77f626a95cc2",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "journal-card",
+      "path": "public/assets/cozy-mosaic/journal-card.webp",
+      "width": 512,
+      "height": 256,
+      "purpose": "Reusable paper journal-card",
+      "sha256": "bf2267c3b4e0555b11e63d521d82971c8a2e1ec60a1706233fe3e09dc9b2ecc2",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "modal",
+      "path": "public/assets/cozy-mosaic/modal.webp",
+      "width": 512,
+      "height": 512,
+      "purpose": "Reusable paper modal",
+      "sha256": "4bc3e4cc0ea6aecf4979e8368d4407cce4d29f444cd3e24f4d5a66c6b472f8ae",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "board-frame",
+      "path": "public/assets/cozy-mosaic/board-frame.webp",
+      "width": 512,
+      "height": 512,
+      "purpose": "Reusable paper board-frame",
+      "sha256": "a9308b8a9e7fea42feae76d50864c0f7a0b30c95550e57418007de265b23640a",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "chapter-tab",
+      "path": "public/assets/cozy-mosaic/chapter-tab.webp",
+      "width": 256,
+      "height": 144,
+      "purpose": "Reusable paper chapter-tab",
+      "sha256": "3c4f451967fd4f91ee10db1f76a1c2f92e9e9a8348e79a9c5c72bdb6d647f09e",
+      "slice": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "key": "mosaic-flower",
+      "path": "public/assets/cozy-mosaic/mosaic-flower.webp",
+      "width": 640,
+      "height": 490,
+      "purpose": "Menu paper collage emblem; generated transparent artwork",
+      "sha256": "4a09feec481d5845b41584186c5f6df7b25759fa213521c791ac9cd4fa7db04b"
+    },
+    {
+      "key": "back",
+      "path": "public/assets/cozy-mosaic/back.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "1a100ac097ba631a4b772d783b697dd601c6c54e6ca2467bc571b6ccf65a7bd2"
+    },
+    {
+      "key": "settings",
+      "path": "public/assets/cozy-mosaic/settings.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "fc4447791677b8647313c22b297bc51cec825afd860c69bf772f1a36e2fdcd2b"
+    },
+    {
+      "key": "book",
+      "path": "public/assets/cozy-mosaic/book.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "12500f39521c9d401f8e791cfab6f8bd6d5462f725b3118cbdbc9549db7cfae6"
+    },
+    {
+      "key": "check",
+      "path": "public/assets/cozy-mosaic/check.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "4ef6a6c156317c152b34268f303131fcc42e7e793b832088776b6098a5438e0f"
+    },
+    {
+      "key": "lock",
+      "path": "public/assets/cozy-mosaic/lock.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "cd87498f3fb40ad63e86f3a39a111b7e764e920c341a7a10c0ba80f2896a9815"
+    },
+    {
+      "key": "info",
+      "path": "public/assets/cozy-mosaic/info.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "b690c9c0f9e3df9efb100623c85d4a5d3793267d61ab84b5b6076c8cf081e508"
+    },
+    {
+      "key": "row",
+      "path": "public/assets/cozy-mosaic/row.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "70ddbd8d88cb3c09e9f9bf22a304044e7414635aafddecd06fbcdafc1a81e279"
+    },
+    {
+      "key": "column",
+      "path": "public/assets/cozy-mosaic/column.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "d731089f44eebd41c2037d67e3dec210573ebbfc38730c7e6289d1ce891b6c2a"
+    },
+    {
+      "key": "cross",
+      "path": "public/assets/cozy-mosaic/cross.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "822f8bd2cbd431fa4cf3279061f62ffcb308e2c6208d253fa782dab6ce4f297e"
+    },
+    {
+      "key": "retry",
+      "path": "public/assets/cozy-mosaic/retry.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "b7cd62429e69aa5440241fe3a53e5556eb3bc134264cb4db8a5089b47d32f175"
+    },
+    {
+      "key": "play",
+      "path": "public/assets/cozy-mosaic/play.png",
+      "width": 128,
+      "height": 128,
+      "purpose": "Reusable UI icon; raster PNG",
+      "sha256": "a227c75e999b98161d79b125d1e62e0a514ba56d5be2b267daeb8ea05cc1d516"
+    },
+    {
+      "key": "stamp",
+      "path": "public/assets/cozy-mosaic/stamp.png",
+      "width": 256,
+      "height": 256,
+      "purpose": "Shared order completion seal; number remains Phaser Text",
+      "sha256": "b14c799851397fadef6b800f90987a6cc313bb08813ca0664f56d0da1fd16dd6"
+    }
+  ]
+}

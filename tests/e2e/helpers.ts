@@ -24,8 +24,9 @@ export async function click(page: Page, x: number, y: number) {
 export async function frames(page: Page) {
  await page.evaluate(() => new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
 }
-export async function open(page: Page, url = '/') {
+export async function open(page: Page, url = '/', waitForReady = true) {
  await page.goto(url); await expect(page.locator('canvas')).toBeVisible();
+ if(waitForReady) await expect(page.locator('canvas')).toHaveAttribute('aria-busy','false');
  // Initial scene render + ready menu render, without a production debug hook.
  await frames(page); await frames(page);
 }
@@ -33,6 +34,8 @@ export async function drag(page: Page, slot: number, row: number, col: number) {
  const from = await point(page, [90,240,390][slot]!,670);
  const to = await point(page,20+(col+0.5)*44,156+(row+0.5)*44);
  await page.mouse.move(from.x,from.y); await page.mouse.down();
- await page.mouse.move(to.x,to.y,{steps:8}); await page.mouse.up();
+ // Keep a real multi-event drag, but avoid eight costly software-GL frames
+ // per placement on headless CI. Native touch events are tested separately.
+ await page.mouse.move(to.x,to.y,{steps:3}); await page.mouse.up();
  await frames(page);
 }

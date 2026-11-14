@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { paperSurface } from './CozyAssets';
 import { playAudioEffect } from "../audio/AudioRuntime.js";
 import { LOGICAL_GAME_HEIGHT, LOGICAL_GAME_WIDTH, setHiDpiTextResolution } from "./Display.js";
 import { createButtonHitArea, resolveButtonVisual, type ButtonKind, type ButtonState } from "./UiPolicy.js";
@@ -67,7 +68,9 @@ const createButton = (
   const graphics = scene.add.graphics();
   const label = createUiText(scene, renderScale, 0, 0, options.label,
     kind === "primary" ? "buttonPrimary" : "buttonSecondary", { align: "center" }).setOrigin(0.5);
-  const visualContent = scene.add.container(0, 0, [graphics, label]);
+  const artKey = kind === 'primary' || kind === 'danger' ? 'button-primary' : 'button-secondary';
+  const art = scene.textures.exists(`cozy-${artKey}`) ? scene.add.nineslice(0,0,`cozy-${artKey}`,undefined,width+8,height+8,32,32,32,32) : null;
+  const visualContent = scene.add.container(0, 0, art ? [graphics, art, label] : [graphics, label]);
   const container = scene.add.container(options.x, options.y, [visualContent]);
   let disabled = options.disabled ?? false;
   let focused = false;
@@ -94,7 +97,10 @@ const createButton = (
           : resolvedState === "hover" ? VISUAL_COLORS.secondaryHover.phaser
             : VISUAL_COLORS.state.pressedFill.phaser
         : visual.fill;
-    graphics.fillStyle(fill, visual.fillAlpha).fillRoundedRect(-width / 2, -height / 2, width, height, radius);
+    if (art) {
+      const key = resolvedState === 'disabled' ? 'button-disabled' : resolvedState === 'pressed' ? 'button-pressed' : artKey;
+      if (scene.textures.exists(`cozy-${key}`)) art.setTexture(`cozy-${key}`);
+    } else graphics.fillStyle(fill, visual.fillAlpha).fillRoundedRect(-width / 2, -height / 2, width, height, radius);
     if (!options.borderless && visual.borderWidth > 0) graphics.lineStyle(visual.borderWidth, visual.border, 1)
       .strokeRoundedRect(-width / 2, -height / 2, width, height, radius);
     label.setColor(visual.label);
@@ -193,7 +199,6 @@ export const createModalShell = (scene: Phaser.Scene, options: PanelOptions): Ph
   const backdrop = createViewportBackdrop(
     scene, VISUAL_COLORS.overlay.modal.phaser, VISUAL_COLORS.overlay.modal.alpha,
   ).setInteractive();
-  const panel = scene.add.graphics().fillStyle(VISUAL_COLORS.surface.elevated.phaser)
-    .fillRoundedRect(options.x - options.width / 2, options.y - options.height / 2, options.width, options.height, COMPONENT_RADII.modal);
+  const panel = paperSurface(scene, 'modal', options.x, options.y, options.width, options.height, VISUAL_COLORS.surface.elevated.phaser);
   return scene.add.container(0, 0, [backdrop, panel]);
 };
