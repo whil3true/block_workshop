@@ -32,6 +32,7 @@ export class WorkshopScene extends Phaser.Scene {
  private backdrop: Phaser.GameObjects.Rectangle | null = null;
  private preview!: Phaser.GameObjects.Graphics;
  private ghost!: Phaser.GameObjects.Container;
+ private trayFigures: Phaser.GameObjects.Container[] = [];
  private effects!: Phaser.GameObjects.Container;
  private dirty = true;
  private disposed = false;
@@ -73,11 +74,13 @@ export class WorkshopScene extends Phaser.Scene {
   });
   const cancel = (): void => this.cancelDrag();
   this.game.canvas.addEventListener('pointercancel', cancel);
+  window.addEventListener('blur', cancel);
   const resize = (): void => { this.cancelDrag(); this.invalidate(); };
   this.scale.on(Phaser.Scale.Events.RESIZE, resize);
   this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
    this.disposed = true;
    this.game.canvas.removeEventListener('pointercancel', cancel);
+   window.removeEventListener('blur', cancel);
    this.scale.off(Phaser.Scale.Events.RESIZE, resize);
   });
   this.draw();
@@ -151,7 +154,7 @@ export class WorkshopScene extends Phaser.Scene {
   this.root.add(this.backdrop);
  }
  private draw(): void {
-  this.dirty = false; this.root.removeAll(true); this.backdrop = null;
+  this.dirty = false; this.root.removeAll(true); this.backdrop = null; this.trayFigures = [];
   if (this.screen === 'menu') this.drawMenu();
   else if (this.screen === 'journal') this.drawJournal();
   else this.drawPlay();
@@ -263,8 +266,11 @@ export class WorkshopScene extends Phaser.Scene {
   this.pieces.forEach((piece,slot) => {
    this.surface('panel',TRAY.centers[slot]!,TRAY.y,140,112,0xefe4d6);
    if (!piece) return;
-   const trayGraphics=this.add.graphics(); this.root.add(trayGraphics);
-   this.drawPiece(this.root,trayGraphics,piece,TRAY.centers[slot]!-piece.bbox.w*TRAY.cell/2,TRAY.y-piece.bbox.h*TRAY.cell/2,TRAY.cell);
+   // Visibility is presentation-only; the offer remains intact until place().
+   const figure=this.add.container(0,0).setVisible(this.drag?.slot !== slot);
+   this.trayFigures[slot]=figure; this.root.add(figure);
+   const trayGraphics=this.add.graphics(); figure.add(trayGraphics);
+   this.drawPiece(figure,trayGraphics,piece,TRAY.centers[slot]!-piece.bbox.w*TRAY.cell/2,TRAY.y-piece.bbox.h*TRAY.cell/2,TRAY.cell);
    const zone = this.add.zone(TRAY.centers[slot]!,TRAY.y,TRAY.hitWidth,TRAY.hitHeight).setName(`tray-${slot}`).setInteractive({useHandCursor:true});
    zone.on('pointerdown',(pointer: Phaser.Input.Pointer) => this.pickup(pointer,slot,piece)); this.root.add(zone);
   });
@@ -414,7 +420,8 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private pickup(pointer: Phaser.Input.Pointer,slot: number,piece: Piece): void {
   if (this.screen !== 'play' || this.drag || this.services.gate.paused || this.terminal || this.externalBlock()) return;
-  this.drag={pointerId:pointer.id,slot,piece,lift:pointer.wasTouch ? 40 : 0,x:0,y:0}; this.services.audio.pickup(); this.move(pointer);
+  this.drag={pointerId:pointer.id,slot,piece,lift:pointer.wasTouch ? 40 : 0,x:0,y:0};
+  this.trayFigures[slot]?.setVisible(false); this.services.audio.pickup(); this.move(pointer);
  }
  private move(pointer: Phaser.Input.Pointer): void {
   const drag=this.drag; if (!drag || pointer.id !== drag.pointerId) return;
@@ -431,11 +438,12 @@ export class WorkshopScene extends Phaser.Scene {
    if (row>=10 || col>=10) continue;
    const x=BOARD.x+col*44+1,y=BOARD.y+row*44+1;
    this.preview.fillRoundedRect(x,y,42,42,3).strokeRoundedRect(x,y,42,42,3);
-   if (!valid) for (let i=7;i<35;i+=10) this.preview.lineBetween(x+5,y+i,x+15,y+i-5);
   }
  }
  private release(pointer: Phaser.Input.Pointer): void {
   const drag=this.drag;if (!drag || pointer.id !== drag.pointerId) return;
+  // Phaser also emits pointerup for native touchcancel; it must never place.
+  if (pointer.wasCanceled) { this.cancelDrag(); return; }
   this.move(pointer); const anchor=boardAnchor(drag.x,drag.y); this.cancelDrag();
   if (!this.services.gate.paused && anchor && canPlace(this.board,drag.piece,anchor.row,anchor.col)) {
    const before=this.board;
@@ -454,5 +462,8 @@ export class WorkshopScene extends Phaser.Scene {
    }
   } else this.services.audio.reject();
  }
- cancelDrag(): void { this.drag=null;this.ghost?.removeAll(true);this.preview?.clear(); }
+ cancelDrag(): void {
+  if (this.drag) this.trayFigures[this.drag.slot]?.setVisible(true);
+  this.drag=null;this.ghost?.removeAll(true);this.preview?.clear();
+ }
 }
