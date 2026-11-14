@@ -12,14 +12,14 @@ import type { LocaleRuntime } from '../app/LocaleRuntime';
 import type { Word } from '../app/Localization';
 import type { CampaignController } from '../campaign/CampaignSession';
 import { CAMPAIGN_CATALOG, CHAPTERS, findOrder, isOrderUnlocked } from '../campaign/CampaignCatalog';
-import type { Operation } from '../campaign/OrderRules';
+import { fragmentProgress, orderProgress, type TargetFragment } from '../campaign/OrderRules';
 import { configureLogicalCamera } from './Display';
 import { createPrimaryButton, createSecondaryButton, createUiText, createViewportBackdrop, createModalShell } from './UiPrimitives';
 import { createAudioVolumeSlider } from './AudioVolumeSlider';
 import { BOARD, TRAY, PIECE_COLORS, TILE_MATERIAL, boardAnchor } from './BoardGeometry';
-import { preloadCozyAssets, paperSurface } from './CozyAssets';
+import { preloadCozyAssets, paperSurface, syncViewportPaper } from './CozyAssets';
 
-type Modal = 'settings' | 'restart' | 'reward' | 'goal' | null;
+type Modal = 'settings' | 'restart' | 'reward' | 'goal' | 'campaignNotice' | null;
 export interface SceneServices {
  model: ModelApi; campaign: CampaignController; gate: PauseGate; locale: LocaleRuntime; manager: AudioManager; audio: AudioApi;
  platform: PlatformService; flow: AdFlow<TrayOffer>; density: number;
@@ -38,6 +38,7 @@ export class WorkshopScene extends Phaser.Scene {
  private chapter = 1;
  private modal: Modal = null;
  private ready = false;
+ private selectedFragment: string | null = null;
  private cover = false;
  private drag: ActiveDrag | null = null;
  private offering: TrayOffer | null = null;
@@ -52,6 +53,10 @@ export class WorkshopScene extends Phaser.Scene {
   this.game.canvas.setAttribute('aria-busy','true');
   this.game.canvas.setAttribute('aria-label',this.services.locale.t('title'));
   configureLogicalCamera(this, this.services.density);
+  syncViewportPaper(this);
+  // Crop only transparent padding; the button and its hit-area stay at (49,45).
+  const back = this.textures.exists('cozy-back') ? this.textures.get('cozy-back') : null;
+  if (back && !back.has('centered')) back.add('centered',0,39,24,70,81);
   this.root = this.add.container(0, 0);
   this.preview = this.add.graphics().setDepth(10);
   this.ghost = this.add.container(0,0).setDepth(11);
@@ -103,7 +108,10 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private surface(key: string, x: number, y: number, w: number, h: number, fallback = 0xfff8f1): void { this.root.add(paperSurface(this,key,x,y,w,h,fallback)); }
  private icon(key: string, x: number, y: number, size = 32, fallback = ''): void {
-  if (this.textures.exists(`cozy-${key}`)) this.root.add(this.add.image(x,y,`cozy-${key}`).setDisplaySize(size,size));
+  if (this.textures.exists(`cozy-${key}`)) {
+   const image = this.add.image(x,y,`cozy-${key}`,key === 'back' ? 'centered' : undefined);
+   image.setDisplaySize(key === 'back' ? size*70/81 : size,size); this.root.add(image);
+  }
   else if (fallback) this.text(x,y,fallback,'body');
  }
  private button(key: string, word: Word | 'RU' | 'EN', x: number, y: number, action: () => void, width = 200, disabled = false, primary = false): void {
@@ -130,11 +138,6 @@ export class WorkshopScene extends Phaser.Scene {
  private overlay(): void { this.root.add(createViewportBackdrop(this,0x4e4038,0.55).setInteractive()); }
  private draw(): void {
   this.dirty = false; this.root.removeAll(true);
-  this.root.add(createViewportBackdrop(this,0xf6efe6));
-  if (this.textures.exists('cozy-paper')) {
-   const camera = this.cameras.main;
-   this.root.add(this.add.tileSprite(240,400,this.scale.gameSize.width/camera.zoom,this.scale.gameSize.height/camera.zoom,'cozy-paper').setAlpha(0.46));
-  }
   if (this.screen === 'menu') this.drawMenu();
   else if (this.screen === 'journal') this.drawJournal();
   else this.drawPlay();
@@ -149,18 +152,16 @@ export class WorkshopScene extends Phaser.Scene {
   else { this.surface('tile-sage',215,130,62,62,0x9cab86); this.surface('tile-apricot',266,174,62,62,0xdeaa8b); }
   this.text(240,274,locale.t('title'),'screenTitle',440).setFontSize(36);
   this.text(240,315,locale.t('studio'),'caption',430,'#7A6A60');
-  this.surface('order-card',240,412,416,144);
-  this.icon('book',82,402,55,'▤');
-  this.text(267,377,locale.t('orders'),'screenTitle');
-  this.text(267,416,`${locale.t('chapter')} ${this.chapter} · ${campaign.completed.length}/${CAMPAIGN_CATALOG.length}`,'caption',290,'#7A6A60');
-  this.text(267,451,locale.t(campaign.active?.status === 'running' ? 'resume' : 'play'),'body',300,'#98513F');
-  this.zone('orders',240,412,416,144,() => this.navigate('journal'));
-  this.surface('journal-card',240,565,416,120,0xefe4d6);
-  this.icon('play',82,561,42,'▷');
-  this.text(267,534,locale.t('classic'),'screenTitle');
-  this.text(267,572,`${locale.t('best')}: ${this.formatScore(model.bestScore)}`,'caption',290,'#7A6A60');
-  this.text(267,604,locale.t(!model.gameOver && model.score > 0 ? 'resume' : 'play'),'caption',300,'#98513F');
-  this.zone('play',240,565,416,120,() => {
+  const modeCard = (key: string, y: number, icon: string, title: Word, subtitle: string, resume: boolean, action: () => void): void => {
+   this.surface(key === 'orders' ? 'order-card' : 'journal-card',240,y,416,144);
+   this.icon(icon,82,y,46,key === 'orders' ? '▤' : '▷');
+   this.text(267,y-39,locale.t(title),'screenTitle',308);
+   this.text(267,y+1,subtitle,'caption',298,'#7A6A60');
+   this.text(267,y+39,locale.t(resume ? 'resume' : 'play'),'body',298,'#98513F');
+   this.zone(key,240,y,416,144,action);
+  };
+  modeCard('orders',412,'book','orders',`${locale.t('chapter')} ${this.chapter} · ${campaign.completed.length}/${CAMPAIGN_CATALOG.length}`,campaign.active?.status === 'running',() => this.navigate('journal'));
+  modeCard('play',580,'play','classic',`${locale.t('best')}: ${this.formatScore(model.bestScore)}`,!model.gameOver && model.score > 0,() => {
    if (model.gameOver) model.commitRestart();
    this.mode = 'classic'; this.services.audio.unlock(); this.navigate('play');
   });
@@ -189,7 +190,8 @@ export class WorkshopScene extends Phaser.Scene {
    this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',columns === 1 ? 82 : x-74,y+26,28,complete ? '✓' : unlocked ? '›' : '•');
    this.text(textX,y-29,order.title[locale.locale],'body',textWidth);
    this.text(textX,y+6,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',textWidth,complete ? '#5B704D' : '#7A6A60');
-   const progress = campaign.active?.orderId === order.id && campaign.active.status === 'running' ? `${locale.t('step')} ${campaign.active.stage+1}/${order.operations.length}` : this.operationLabel(order.operations[0]!);
+   const current = campaign.active?.orderId === order.id ? campaign.active : null;
+   const progress = current ? `${locale.t('removed')}: ${orderProgress(order.fragments,current.remainingTargets).removed}/${orderProgress(order.fragments,current.remainingTargets).total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
    this.text(textX,y+36,progress,'caption',textWidth,'#98513F');
    this.zone(`order-${index+1}`,x,y,cardWidth,120,() => this.startOrder(order.id),!unlocked);
   });
@@ -215,22 +217,22 @@ export class WorkshopScene extends Phaser.Scene {
    }
   } else if (active) {
    const order = findOrder(active.orderId)!;
-   this.surface('order-card',240,113,448,70);
-   this.text(240,99,active.status === 'succeeded' ? locale.t('orderDone') : this.operationLabel(order.operations[active.stage]!), 'body',420);
-   const width = order.operations.length === 1 ? 140 : 340;
-   order.operations.forEach((op,i) => {
-    const x = 240-width/2+(i+.5)*width/order.operations.length;
-    const label = i < active.stage ? '✓' : `${i+1}${op.kind === 'targetLine' ? ` · ${op.index+1}` : ''}`;
-    this.icon(op.kind === 'crossClear' ? 'cross' : op.axis === 'column' ? 'column' : 'row',x-26,130,22);
-    this.text(x+13,130,label,'caption',100,i === active.stage ? '#98513F' : '#7A6A60');
+   this.text(240,74,`${locale.t('targetsLeft')}: ${active.remainingTargets.length}`,'caption',300,'#98513F').setFontSize(16);
+   const width = (448 - (order.fragments.length-1)*8)/order.fragments.length;
+   order.fragments.forEach((fragment,i) => {
+    const x = 16 + width/2 + i*(width+8), progress = fragmentProgress(fragment,active.remainingTargets);
+    this.surface('order-card',x,117,width,60);
+    this.drawFragment(fragment,x-Math.min(width-24,140)/2+20,117,40);
+    const labelX = x+18, labelWidth = width-53;
+    this.text(labelX,106,`${fragment.id} · ${progress.removed}/${progress.total}`,'body',labelWidth,progress.remaining ? '#4E4038' : '#5B704D').setFontSize(19);
+    this.text(labelX,129,locale.t(progress.remaining ? 'removed' : 'completed'),'caption',labelWidth,progress.remaining ? '#7A6A60' : '#5B704D').setFontSize(15);
+    this.zone(`goal-${fragment.id}`,x,117,width,60,() => { this.selectedFragment=fragment.id; this.openModal('goal'); });
    });
-   this.icon('info',445,112,22,'i');
-   this.zone('goal-details',240,113,440,64,() => this.openModal('goal'));
   }
   this.surface('board-frame',240,376,456,456,0xd8c9b7);
   const graphics = this.add.graphics(); this.root.add(graphics);
   for (let r=0;r<10;r++) for (let c=0;c<10;c++) this.tile(this.root,graphics,this.board[r]![c]!,BOARD.x+c*44,BOARD.y+r*44,44);
-  if (this.mode === 'campaign' && active?.status === 'running') this.drawTarget(graphics);
+  if (this.mode === 'campaign' && active?.status === 'running') this.drawTargets();
   if (this.comboRemaining > 0 && this.mode === 'classic') this.text(240,612,`${locale.t('combo')} ×${this.combo}`,'caption');
   this.pieces.forEach((piece,slot) => {
    this.surface('panel',TRAY.centers[slot]!,TRAY.y,140,112,0xefe4d6);
@@ -249,16 +251,32 @@ export class WorkshopScene extends Phaser.Scene {
    if (active?.status !== 'running') this.drawCampaignResult();
   }
  }
- private drawTarget(graphics: Phaser.GameObjects.Graphics): void {
-  const active = this.services.campaign.active!, op = findOrder(active.orderId)!.operations[active.stage];
-  if (op?.kind !== 'targetLine') return;
-  graphics.lineStyle(3,0x9a6a36);
-  if (op.axis === 'row') {
-   const y = BOARD.y+op.index*44;
-   for (const x of [16,464]) graphics.lineBetween(x,y+5,x,y+39);
-  } else {
-   const x = BOARD.x+op.index*44;
-   for (const y of [152,600]) graphics.lineBetween(x+5,y,x+39,y);
+ /** This miniature reads the immutable silhouette and the remaining-target mask only. */
+ private drawFragment(fragment: TargetFragment, x: number, y: number, size: number): void {
+  const active = this.services.campaign.active!, order = findOrder(active.orderId)!;
+  const rows=fragment.cells.map(c=>Math.floor(c/10)), cols=fragment.cells.map(c=>c%10);
+  const top=Math.min(...rows), left=Math.min(...cols), height=Math.max(...rows)-top+1, width=Math.max(...cols)-left+1;
+  const cell=Math.min(size/width,size/height), remaining=new Set(active.remainingTargets);
+  const graphics=this.add.graphics(); this.root.add(graphics);
+  for (const address of fragment.cells) {
+   const r=Math.floor(address/10), c=address%10, px=x-width*cell/2+(c-left)*cell, py=y-height*cell/2+(r-top)*cell;
+   if (remaining.has(address)) this.tile(this.root,graphics,order.board[r]![c]!,px,py,cell);
+   else {
+    // Technical status marks: a faint empty square and a tick, never current board occupancy.
+    graphics.fillStyle(0xd8c9b7,.5).fillRoundedRect(px+1,py+1,cell-2,cell-2,2);
+    graphics.lineStyle(Math.max(1,cell*.08),0x5b704d,.85).lineBetween(px+cell*.23,py+cell*.5,px+cell*.43,py+cell*.7).lineBetween(px+cell*.43,py+cell*.7,px+cell*.78,py+cell*.28);
+   }
+  }
+ }
+ private drawTargets(): void {
+  const graphics = this.add.graphics(); this.root.add(graphics);
+  const remaining = this.services.campaign.active!.remainingTargets;
+  for (const address of remaining) {
+   const x=BOARD.x+(address%10)*44+22, y=BOARD.y+Math.floor(address/10)*44+22;
+   // Reuse the approved raster mosaic seal, backed with ivory for contrast at phone scale.
+   graphics.fillStyle(0xfff8ea,.96).fillCircle(x,y,14);
+   if (this.textures.exists('cozy-cross')) this.root.add(this.add.image(x,y,'cozy-cross').setDisplaySize(22,22));
+   else this.text(x,y,'◆','body',0,'#98513F').setFontSize(20);
   }
  }
  private drawClassicOver(): void {
@@ -288,6 +306,7 @@ export class WorkshopScene extends Phaser.Scene {
  private navigate(screen: 'menu' | 'journal' | 'play'): void {
   if (this.externalBlock() || this.modal || this.services.flow.busy) return;
   this.commitNavigation(screen);
+  if (screen === 'journal' && this.services.campaign.notice) this.openModal('campaignNotice');
  }
  /** Ad destinations can navigate while transition/SDK pause still owns input. */
  private commitNavigation(screen: 'menu' | 'journal' | 'play'): void {
@@ -322,9 +341,17 @@ export class WorkshopScene extends Phaser.Scene {
   } else if (this.modal === 'goal') {
    const active=this.services.campaign.active!, order=findOrder(active.orderId)!;
    this.text(240,125,locale.t('goalDetails'),'screenTitle');
-   order.operations.forEach((op,i)=>this.text(240,200+i*52,`${i < active.stage ? '✓' : i+1}. ${this.operationLabel(op)}`,'body',390,i === active.stage ? '#98513F' : '#4E4038'));
-   this.text(240,467,locale.t('orderRules'),'body',370);
+   const fragment = order.fragments.find(f=>f.id === this.selectedFragment) ?? order.fragments[0]!;
+   const progress = fragmentProgress(fragment,active.remainingTargets);
+   this.text(240,180,fragment.name[locale.locale],'body',390);
+   this.drawFragment(fragment,240,268,100);
+   this.text(240,350,`${locale.t('removed')}: ${progress.removed}/${progress.total} · ${locale.t('left')}: ${progress.remaining}`,'body',390);
+   this.text(240,477,locale.t('orderRules'),'body',370);
    this.button('close-goal','close',240,667,() => this.closeModal(),320);
+  } else if (this.modal === 'campaignNotice') {
+   this.text(240,274,locale.t('campaignUpdated'),'screenTitle',390);
+   this.text(240,371,locale.t(this.services.campaign.notice === 'updated' ? 'campaignReset' : 'campaignRecovered'),'body',370);
+   this.button('acknowledge-campaign','close',240,508,() => { this.services.campaign.acknowledgeNotice(); this.closeModal(); },320,false,true);
   } else {
    const restart=this.modal === 'restart', campaign=this.mode === 'campaign';
    this.text(240,273,locale.t(restart ? campaign ? 'retry' : 'newGame' : 'reward'),'screenTitle',400);
@@ -347,12 +374,6 @@ export class WorkshopScene extends Phaser.Scene {
   const l=this.services.locale.locale;
   if (n >= 1e6) return new Intl.NumberFormat(l,{notation:'compact',maximumFractionDigits:1}).format(n);
   return new Intl.NumberFormat(l).format(n);
- }
- private operationLabel(op: Operation): string {
-  const t=this.services.locale.t.bind(this.services.locale);
-  if (op.kind === 'crossClear') return t('crossGoal');
-  if (op.kind === 'targetLine') return `${t(op.axis === 'row' ? 'targetRow' : 'targetColumn')} ${op.index+1}`;
-  return `${t(op.axis === 'column' ? 'columnGoal' : 'rowGoal')}${op.count > 1 ? ` · ${op.count}` : ''}`;
  }
  private tile(target: Phaser.GameObjects.Container,graphics: Phaser.GameObjects.Graphics,family: PieceFamily | null,x: number,y: number,cell: number): void {
   const key=family ? `cozy-tile-${TILE_MATERIAL[family]}` : 'cozy-cell-empty';
@@ -391,12 +412,12 @@ export class WorkshopScene extends Phaser.Scene {
    const before=this.board;
    if (this.mode === 'classic') this.services.model.place(drag.slot,anchor.row,anchor.col);
    else {
-    const oldStage=this.services.campaign.active!.stage;
+    const oldRemaining=this.services.campaign.active!.remainingTargets.length;
     this.services.campaign.place(drag.slot,anchor.row,anchor.col);
     const active=this.services.campaign.active!;
     if (active.status === 'succeeded') this.services.audio.perfect();
     else if (active.status === 'failed') this.services.audio.gameOver();
-    else if (active.stage > oldStage) this.services.audio.clear(); else this.services.audio.place();
+    else if (active.remainingTargets.length < oldRemaining) this.services.audio.clear(); else this.services.audio.place();
    }
    if (!this.terminal) for (let r=0;r<10;r++) for (let c=0;c<10;c++) if (before[r]![c] && !this.board[r]![c]) {
     const light=this.add.rectangle(BOARD.x+c*44+22,BOARD.y+r*44+22,40,40,0xfff8f1,.75);this.effects.add(light);

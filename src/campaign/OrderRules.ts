@@ -1,15 +1,26 @@
 import type { ClearResult } from '../engine';
-export type Operation =
- | { kind: 'lines'; axis: 'row' | 'column' | 'any'; count: number }
- | { kind: 'targetLine'; axis: 'row' | 'column'; index: number }
- | { kind: 'crossClear' };
-export interface OrderProgress { readonly stage: number; readonly count: number; }
-/** Exactly one active operation consumes a placement. Extra lines never spill into the next stage. */
-export function advanceOrder(operations: readonly Operation[], progress: OrderProgress, clear: Pick<ClearResult, 'rowsCleared' | 'colsCleared'>): OrderProgress {
- const op = operations[progress.stage]; if (!op) return progress;
- const rows = clear.rowsCleared, cols = clear.colsCleared;
- const gain = op.kind === 'lines' ? op.axis === 'row' ? rows.length : op.axis === 'column' ? cols.length : rows.length + cols.length
-  : op.kind === 'targetLine' ? Number((op.axis === 'row' ? rows : cols).includes(op.index)) : Number(rows.length > 0 && cols.length > 0);
- const target = op.kind === 'lines' ? op.count : 1;
- return progress.count + gain >= target ? { stage: progress.stage + 1, count: 0 } : { stage: progress.stage, count: progress.count + gain };
+
+/** Row-major board addresses. Identity belongs to the original tile, never its replacement. */
+export type TargetCell = number;
+export interface TargetFragment {
+ readonly id: string;
+ readonly name: { readonly ru: string; readonly en: string };
+ readonly cells: readonly TargetCell[];
+}
+export interface FragmentProgress { readonly total: number; readonly removed: number; readonly remaining: number; }
+export const targetCell = (row: number, col: number): TargetCell => row * 10 + col;
+export const initialTargets = (fragments: readonly TargetFragment[]): readonly TargetCell[] => fragments.flatMap(f => [...f.cells]);
+
+/** Filter a union of cleared addresses once, including row/column intersections. No active stage. */
+export function clearTargets(remaining: readonly TargetCell[], clear: Pick<ClearResult, 'rowsCleared' | 'colsCleared'>): readonly TargetCell[] {
+ const rows = new Set(clear.rowsCleared), cols = new Set(clear.colsCleared);
+ return remaining.filter(cell => !rows.has(Math.floor(cell / 10)) && !cols.has(cell % 10));
+}
+export function fragmentProgress(fragment: TargetFragment, remaining: readonly TargetCell[]): FragmentProgress {
+ const mask = new Set(remaining), count = fragment.cells.filter(cell => mask.has(cell)).length;
+ return { total: fragment.cells.length, removed: fragment.cells.length - count, remaining: count };
+}
+export function orderProgress(fragments: readonly TargetFragment[], remaining: readonly TargetCell[]): FragmentProgress {
+ const total = fragments.reduce((sum, f) => sum + f.cells.length, 0);
+ return { total, removed: total - remaining.length, remaining: remaining.length };
 }
