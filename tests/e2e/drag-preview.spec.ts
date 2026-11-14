@@ -47,7 +47,7 @@ for(const mode of ['classic','campaign'] as const) {
 
  test(`${mode}: interruptions restore source without changing either save`,async({page})=>{
   await page.setViewportSize({width:393,height:852});await start(page,mode);
-  const source=await region(page,30,626,120,104),saved=await saves(page);
+  const source=await region(page,30,626,120,104),header=await region(page,0,0,480,70),saved=await saves(page);
   for(const reason of ['pointercancel','blur','pagehide','resize','modal','escape']) {
    await hold(page,0);await move(page,240,310);
    expect((await region(page,30,626,120,104)).equals(source)).toBe(false);
@@ -56,14 +56,21 @@ for(const mode of ['classic','campaign'] as const) {
    if(reason==='pagehide')await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    if(reason==='resize')await page.setViewportSize({width:852,height:393});
    // A second mouse down exercises the actual modal hit zone while holding.
-   if(reason==='modal')await click(page,431,45);
+   if(reason==='modal') {
+    await click(page,431,45);
+    expect((await region(page,0,0,480,70)).equals(header),'Settings actually opened above the held drag').toBe(false);
+   }
    if(reason==='escape')await page.keyboard.press('Escape');
    await frames(page);await move(page,42,178);await page.mouse.up();await frames(page);
    expect(await saves(page),`${reason} must never commit a placement`).toEqual(saved);
    if(reason==='pagehide')await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
    if(reason==='resize')await page.setViewportSize({width:393,height:852});
    if(reason==='modal')await click(page,240,667);
-   if(reason==='escape')await click(page,240,mode==='classic'?565:278);
+   if(reason==='escape') {
+    await click(page,240,mode==='classic'?565:412);
+    if(mode==='campaign')await click(page,240,278);
+   }
+   expect(await saves(page),`${reason} preserves saves after returning to play`).toEqual(saved);
    await frames(page);await frames(page);
    expect((await region(page,30,626,120,104)).equals(source),`${reason} restores source`).toBe(true);
   }
@@ -89,7 +96,9 @@ test('Chromium native Android touch: lift, both gutters, touchcancel and orienta
  await send('touchStart',90,670);await send('touchMove',42,218);
  await page.setViewportSize({width:852,height:393});await frames(page);await send('touchEnd');
  expect(await saves(page)).toEqual(saved);
+ const side=await region(page,580,350,70,70);
  await send('touchStart',90,670);await send('touchMove',-135,425);await send('touchMove',615,425);
+ expect((await region(page,580,350,70,70)).equals(side),'Touch-held figure follows into landscape gutter').toBe(false);
  await page.screenshot({path:info.outputPath('android-landscape-gutter.png')});
  await send('touchEnd');expect(await saves(page)).toEqual(saved);
  await send('touchStart',90,670);await send('touchMove',615,425);await send('touchMove',42,218);await send('touchEnd');
