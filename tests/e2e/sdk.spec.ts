@@ -1,6 +1,6 @@
 import { type Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { seed, snapshot, click, open, drag, frames } from './helpers';
+import { seed, snapshot, point, click, open, drag, frames } from './helpers';
 import type { YandexSdk } from '../../src/platform/YandexSdkTypes';
 declare global { interface Window { qaSdk: {
  ready:number; starts:number; stops:number; requests:number; rewardRequests:number; offset:number;
@@ -41,6 +41,21 @@ test('startup SDK pause holds input and LoadingAPI.ready; gameplay obeys indepen
  await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));await frames(page);await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(1);
  expect(await page.evaluate(()=>window.qaSdk.ready)).toBe(1);
 });
+for(const mode of ['classic','campaign']) {
+ test(`${mode}: SDK interruption restores a held source figure and preserves saves`,async({page})=>{
+  await sdk(page);await click(page,240,mode==='classic'?565:412);if(mode==='campaign')await click(page,240,278);
+  const a=await point(page,30,626),b=await point(page,150,730);
+  const source=()=>page.screenshot({clip:{x:a.x,y:a.y,width:b.x-a.x,height:b.y-a.y}});
+  const before=await source(),saved=await page.evaluate(()=>({...localStorage}));
+  const from=await point(page,90,670),to=await point(page,42,178);
+  await page.mouse.move(from.x,from.y);await page.mouse.down();await page.mouse.move(to.x,to.y,{steps:3});await frames(page);
+  expect((await source()).equals(before),'Source disappears during actual drag').toBe(false);
+  await page.evaluate(()=>window.qaSdk.emit('game_api_pause'));await frames(page);
+  await page.mouse.up();await page.evaluate(()=>window.qaSdk.emit('game_api_resume'));await frames(page);await frames(page);
+  expect((await source()).equals(before),'SDK pause restores the same source figure').toBe(true);
+  expect(await page.evaluate(()=>({...localStorage}))).toEqual(saved);
+ });
+}
 for(const order of ['close-first','resume-first','error','no-fill'] as const) {
  test(`interstitial ${order}: one destination, callbacks never wait for SDK resume`,async({page})=>{
   await sdk(page);await click(page,240,565);await drag(page,0,0,0);
