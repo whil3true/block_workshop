@@ -118,3 +118,20 @@ for(const width of [320,360])for(const locale of ['ru','en'])test(`equal menu ca
  await page.screenshot({path:info.outputPath(`landscape-${locale}.png`)});await drag(page,1,6,6);expect((await campaign(page))!.active.moves).toBe(2);
  await page.setViewportSize({width:1280,height:800});await frames(page);await page.screenshot({path:info.outputPath(`desktop-${locale}.png`)});
 });
+
+for(const locale of ['ru','en'])for(const index of [0,1,2])test(`balanced ${index+1}-goal HUD and completed journal ${locale}`,async({page},info)=>{
+ await seedAttempt(page,initialAttempt(CAMPAIGN_CATALOG[index]!),CAMPAIGN_CATALOG.map(o=>o.id));
+ await seed(page,{locale});await open(page);await click(page,240,412);
+ await page.screenshot({path:info.outputPath(`journal-completed-${locale}.png`)});
+ await click(page,240,278+index*135);
+ await page.screenshot({path:info.outputPath(`goals-${index+1}-${locale}.png`)});
+ // Preserve each entire capsule's original hit area, including both edge cards.
+ const count=CAMPAIGN_CATALOG[index]!.fragments.length;
+ const width=(464-(count-1)*6)/count;
+ for(let i=0;i<count;i++){
+  await click(page,8+width/2+i*(width+6),113);
+  await page.screenshot({path:info.outputPath(`goal-${i+1}-details-${locale}.png`)});
+  await click(page,240,667);
+ }
+ expect((await campaign(page))!.active.moves).toBe(0);
+});

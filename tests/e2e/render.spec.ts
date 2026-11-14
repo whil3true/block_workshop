@@ -9,8 +9,8 @@ test('raster surfaces render in Canvas fallback and frame times stay bounded wit
  const panel=await page.evaluate(()=>{
   const canvas=document.querySelector('canvas')!, context=canvas.getContext('2d');
   if(!context)return null;
-  const scale=canvas.width/480;
-  return context.getImageData(Math.round(60*scale),Math.round(canvas.height/2+(470-400)*scale),1,1).data[3];
+  const scale=Math.min(canvas.width/480,canvas.height/800);
+  return context.getImageData(Math.round(canvas.width/2+(60-240)*scale),Math.round(canvas.height/2+(470-400)*scale),1,1).data[3];
  });
  const hasArt=await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundImage.includes('paper.webp'));
  if(hasArt && panel!==null)expect(panel,'Raster menu panel must be visible in Canvas renderer').toBeGreaterThan(220);

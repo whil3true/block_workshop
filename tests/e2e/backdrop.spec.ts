@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 import { click, drag, frames, open, seed, snapshot } from './helpers';
 import type { Page } from '@playwright/test';
+import { CAMPAIGN_KEY } from '../../src/campaign/CampaignStore';
 
 // Decode the browser screenshot in an offscreen 2D canvas. This measures the
 // final CSS-paper + transparent Canvas composite, not a mocked renderer.
@@ -51,7 +52,21 @@ test('external pause over settings has one dim and restores the modal input owne
 test('order journal removes its settings hit area and retains Back navigation',async({page},info)=>{
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,431,45);
  await page.screenshot({path:info.outputPath('journal-no-settings.png')});
- await click(page,240,278);await click(page,431,45);await click(page,150,230);
+ await click(page,240,278);
+ expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).active.status,CAMPAIGN_KEY)).toBe('running');
+ await click(page,431,45);await click(page,150,230);
  await expect(page.locator('html')).toHaveAttribute('lang','ru');await click(page,240,667);
  await click(page,49,45);await click(page,49,45);await click(page,240,580);await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(1);
+});
+
+test('rotation with an open modal keeps one dim across asymmetric safe areas',async({page},info)=>{
+ await seed(page,{locale:'en'});await page.setViewportSize({width:360,height:640});await open(page);await click(page,240,580);await click(page,431,45);
+ await page.evaluate(()=>{document.body.style.setProperty('--safe-left','32px');document.body.style.setProperty('--safe-bottom','12px');});
+ await page.setViewportSize({width:852,height:393});await frames(page);await frames(page);
+ const points=[{x:3,y:3},{x:426,y:3},{x:848,y:3}];
+ const dim=await pixels(page,await page.screenshot({path:info.outputPath('rotated-safe-settings.png')}),points);
+ await click(page,150,230);await expect(page.locator('html')).toHaveAttribute('lang','ru');await click(page,240,667);
+ const normal=await pixels(page,await page.screenshot({path:info.outputPath('rotated-safe-restored.png')}),points);
+ for(let i=0;i<points.length;i++)for(let c=0;c<3;c++)expect(Math.abs(dim[i]![c]!-(normal[i]![c]!*.52+[78,64,56][c]!*.48))).toBeLessThanOrEqual(2);
+ await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(1);
 });

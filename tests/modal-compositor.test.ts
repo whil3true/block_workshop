@@ -37,7 +37,6 @@ it('nested results, confirmation and external pause replace the single dim sourc
   expect(h.rectangles.filter(r=>!r.destroyed)).toHaveLength(1);
   expect(h.resize.size).toBe(1);
  }
- h.rectangles.at(-1)!.destroyed; // the scene removes the last rectangle with its root
 });
 it('full-viewport coverage follows camera size/zoom and removes its listener on destroy',()=>{
  const h=harness();const backdrop=createViewportBackdrop(h.phaser,0x4e4038,.48);
