@@ -1,18 +1,18 @@
 import { applyPlacement, canPlace, hasAnyLegalPlacement, lineBonus, resolveClears, streakMultiplier, type BoardState } from '../engine';
 import { findPieceById, sampleTray } from '../pieces';
-import { advanceOrder } from './OrderRules';
+import { clearTargets, initialTargets, type TargetCell } from './OrderRules';
 import { findOrder, isOrderUnlocked, type OrderConfig } from './CampaignCatalog';
 import { loadCampaign, saveCampaign, type CampaignState } from './CampaignStore';
 export interface CampaignAttempt {
- readonly orderId: string; readonly contentVersion: number; readonly operationRulesVersion: 1;
+ readonly orderId: string; readonly contentVersion: number; readonly targetRulesVersion: 2;
  readonly board: BoardState; readonly trayIds: readonly (string | null)[];
  readonly nextTrayIndex: number; readonly rngState: number;
  readonly score: number; readonly streak: number; readonly moves: number;
- readonly stage: number; readonly count: number; readonly status: 'running' | 'succeeded' | 'failed';
+ readonly remainingTargets: readonly TargetCell[]; readonly status: 'running' | 'succeeded' | 'failed';
 }
 export function initialAttempt(order: OrderConfig): CampaignAttempt {
- return { orderId: order.id, contentVersion: order.contentVersion, operationRulesVersion: 1, board: order.board.map(r => [...r]),
-  trayIds: [...order.trays[0]!], nextTrayIndex: 1, rngState: order.seed, score: 0, streak: 0, moves: 0, stage: 0, count: 0, status: 'running' };
+ return { orderId: order.id, contentVersion: order.contentVersion, targetRulesVersion: 2, board: order.board.map(r => [...r]),
+  trayIds: [...order.trays[0]!], nextTrayIndex: 1, rngState: order.seed, score: 0, streak: 0, moves: 0, remainingTargets: initialTargets(order.fragments), status: 'running' };
 }
 /** Pure transaction shared by runtime, solution replay and balance checks. No classic persistence or records. */
 export function placeCampaign(state: CampaignAttempt, slot: number, row: number, col: number): CampaignAttempt {
@@ -21,14 +21,14 @@ export function placeCampaign(state: CampaignAttempt, slot: number, row: number,
  if (!piece || !canPlace(state.board, piece, row, col)) return state;
  const order = findOrder(state.orderId); if (!order) return state;
  const cleared = resolveClears(applyPlacement(state.board, piece, row, col));
- const progress = advanceOrder(order.operations, state, cleared);
+ const remainingTargets = clearTargets(state.remainingTargets, cleared);
  const lines = cleared.rowsCleared.length + cleared.colsCleared.length;
  const streak = lines ? state.streak + 1 : 0;
  const score = state.score + piece.cells.length + Math.round(lineBonus(lines) * streakMultiplier(streak)) + (cleared.board.every(r => r.every(c => c === null)) ? 300 : 0);
  let trayIds = [...state.trayIds], nextTrayIndex = state.nextTrayIndex, rngState = state.rngState;
  trayIds[slot] = null;
  // Victory takes priority over empty tray / blocked board. A completed attempt never consumes another deal.
- let status: CampaignAttempt['status'] = progress.stage === order.operations.length ? 'succeeded' : 'running';
+ let status: CampaignAttempt['status'] = remainingTargets.length === 0 ? 'succeeded' : 'running';
  if (status === 'running') {
   if (trayIds.every(id => id === null)) {
    const fixed = order.trays[nextTrayIndex++];
@@ -37,11 +37,13 @@ export function placeCampaign(state: CampaignAttempt, slot: number, row: number,
   }
   if (!hasAnyLegalPlacement(cleared.board, trayIds.map(id => id ? findPieceById(id) ?? null : null))) status = 'failed';
  }
- return { ...state, ...progress, board: cleared.board, trayIds, nextTrayIndex, rngState, score, streak, moves: state.moves + 1, status };
+ return { ...state, remainingTargets, board: cleared.board, trayIds, nextTrayIndex, rngState, score, streak, moves: state.moves + 1, status };
 }
 export class CampaignController {
  private state: CampaignState;
- constructor(private onChange: () => void = () => {}, private canInteract: () => boolean = () => true) { this.state = loadCampaign(); }
+ constructor(private onChange: () => void = () => {}, private canInteract: () => boolean = () => true) { this.state = loadCampaign(); if (this.state.notice) saveCampaign(this.state); }
+ get notice(): CampaignState['notice'] { return this.state.notice; }
+ acknowledgeNotice(): void { this.state = { ...this.state, notice: null }; this.persist(); }
  get active(): CampaignAttempt | null { return this.state.active; }
  get completed(): readonly string[] { return this.state.completedOrderIds; }
  start(id: string, replay = false): boolean {

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { paperSurface } from './CozyAssets';
+import { paperSurface, rasterSliceTexture } from './CozyAssets';
 import { playAudioEffect } from "../audio/AudioRuntime.js";
 import { LOGICAL_GAME_HEIGHT, LOGICAL_GAME_WIDTH, setHiDpiTextResolution } from "./Display.js";
 import { createButtonHitArea, resolveButtonVisual, type ButtonKind, type ButtonState } from "./UiPolicy.js";
@@ -69,7 +69,7 @@ const createButton = (
   const label = createUiText(scene, renderScale, 0, 0, options.label,
     kind === "primary" ? "buttonPrimary" : "buttonSecondary", { align: "center" }).setOrigin(0.5);
   const artKey = kind === 'primary' || kind === 'danger' ? 'button-primary' : 'button-secondary';
-  const art = scene.textures.exists(`cozy-${artKey}`) ? scene.add.nineslice(0,0,`cozy-${artKey}`,undefined,width+8,height+8,32,32,32,32) : null;
+  const art = scene.textures.exists(`cozy-${artKey}`) ? scene.add.image(0,0,rasterSliceTexture(scene,`cozy-${artKey}`,width+8,height+8)).setDisplaySize(width+8,height+8) : null;
   const visualContent = scene.add.container(0, 0, art ? [graphics, art, label] : [graphics, label]);
   const container = scene.add.container(options.x, options.y, [visualContent]);
   let disabled = options.disabled ?? false;
@@ -99,7 +99,7 @@ const createButton = (
         : visual.fill;
     if (art) {
       const key = resolvedState === 'disabled' ? 'button-disabled' : resolvedState === 'pressed' ? 'button-pressed' : artKey;
-      if (scene.textures.exists(`cozy-${key}`)) art.setTexture(`cozy-${key}`);
+      if (scene.textures.exists(`cozy-${key}`)) art.setTexture(rasterSliceTexture(scene,`cozy-${key}`,width+8,height+8));
     } else graphics.fillStyle(fill, visual.fillAlpha).fillRoundedRect(-width / 2, -height / 2, width, height, radius);
     if (!options.borderless && visual.borderWidth > 0) graphics.lineStyle(visual.borderWidth, visual.border, 1)
       .strokeRoundedRect(-width / 2, -height / 2, width, height, radius);

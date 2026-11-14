@@ -47,7 +47,7 @@ export function mountApplication(platform: PlatformService) {
  const density = selectStartupRenderScale(computeRenderScale(window.devicePixelRatio || 1, window.innerWidth, window.innerHeight), isDesktopBrowserUserAgent(navigator.userAgent, navigator.maxTouchPoints));
  scene = new WorkshopScene({ model, campaign, gate, locale, manager, audio, platform, flow, density });
  const game = new Phaser.Game({
-  type: Phaser.AUTO, parent: 'app', backgroundColor: '#F6EFE6', scene: [scene],
+  type: Phaser.AUTO, parent: 'app', transparent: true, scene: [scene],
   audio: { noAudio: true }, // The shared Cozy audio lifecycle owns media and Web Audio.
   input: { activePointers: 2 },
   scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.NO_CENTER, expandParent: false,

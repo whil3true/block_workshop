@@ -1,4 +1,6 @@
-# Paper Mosaic — campaign vertical slice
+# Paper Mosaic — historical campaign vertical slice
+
+> Superseded by [Target fragment orders — rules v2](TARGET_FRAGMENT_ORDERS.md). The sequential rules and v1 upload instructions below document the original slice only; they are not the current campaign.
 
 Base: `dev` at `a3c75a1bbee0a10c012b329e898db0998ec92b64`. Target: Draft PR into `dev`, branch `feature/cozy-mosaic-campaign`. No merge and no feature deployment to Pages.
 
