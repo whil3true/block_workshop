@@ -10,6 +10,10 @@ const campaign = (page: Page) => page.evaluate(key=>JSON.parse(localStorage.getI
 async function readyReload(page: Page): Promise<void> { await page.reload();await expect(page.locator('canvas')).toHaveAttribute('aria-busy','false');await frames(page); }
 test.use({viewport:{width:360,height:640}});
 test('three orders through real Canvas drag, partial-tray reload, results, independent classic and free replay',async({page},info)=>{
+ // This journey plays all three orders, reloads twice and returns to classic.
+ // Hosted Chromium software WebGL exceeds the ordinary single-screen 60s budget.
+ // Keep assertion timeouts unchanged; only budget the complete user journey.
+ test.setTimeout(120_000);
  await seed(page,{locale:'ru',score:17});await open(page);const classicBefore=await snapshot(page);
  await page.screenshot({path:info.outputPath('menu-ru.png')});
  await click(page,240,412);await page.screenshot({path:info.outputPath('journal-ru.png')});
