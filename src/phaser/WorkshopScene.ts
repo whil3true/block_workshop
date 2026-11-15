@@ -179,7 +179,7 @@ export class WorkshopScene extends Phaser.Scene {
    this.text(240,y+39,locale.t(resume ? 'resume' : 'play'),'body',252,'#98513F');
    this.zone(key,240,y,416,144,action);
   };
-  modeCard('orders',412,'book','orders',`${locale.t('chapter')} ${this.chapter} · ${campaign.completed.length}/${CAMPAIGN_CATALOG.length}`,campaign.active?.status === 'running',() => this.navigate('journal'));
+  modeCard('orders',412,'book','orders',`${locale.t('chapter')} ${this.chapter} · ${campaign.completed.length}/${CAMPAIGN_CATALOG.length}`,false,() => this.navigate('journal'));
   modeCard('play',580,'play','classic',`${locale.t('best')}: ${this.formatScore(model.bestScore)}`,!model.gameOver && model.score > 0,() => {
    if (model.gameOver) model.commitRestart();
    this.mode = 'classic'; this.services.audio.unlock(); this.navigate('play');
@@ -209,8 +209,7 @@ export class WorkshopScene extends Phaser.Scene {
    this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',columns === 1 ? 82 : x-74,y+26,28,complete ? '✓' : unlocked ? '›' : '•');
    const title = this.text(0,-32,order.title[locale.locale],'body',textWidth);
    const state = this.text(0,0,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',textWidth,complete ? '#5B704D' : '#7A6A60');
-   const current = campaign.active?.orderId === order.id ? campaign.active : null;
-   const stats = journalProgress(order.fragments,complete,current?.remainingTargets ?? null);
+   const stats = journalProgress(order.fragments,complete,null);
    const progress = stats ? `${locale.t('removed')}: ${stats.removed}/${stats.total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
    const detail = this.text(0,30,progress,'caption',textWidth,'#98513F');
    const copy = this.add.container(textX,y,[title,state,detail]); this.root.add(copy);
@@ -220,8 +219,8 @@ export class WorkshopScene extends Phaser.Scene {
   });
   this.text(240,667,locale.t('future'),'caption',420,'#7A6A60');
   this.text(240,704,`${orders.filter(o=>campaign.completed.includes(o.id)).length} / ${orders.length} · ${locale.t('completed')}`,'caption',430,'#5B704D');
-  const next = campaign.active?.status === 'running' ? campaign.active.orderId : CAMPAIGN_CATALOG.find(o => !campaign.completed.includes(o.id))?.id;
-  this.button('journal-continue',next ? 'resume' : 'classic',240,756,() => {
+  const next = CAMPAIGN_CATALOG.find(o => !campaign.completed.includes(o.id))?.id;
+  this.button('journal-continue',next ? 'play' : 'classic',240,756,() => {
    if (next) this.startOrder(next); else { this.mode='classic'; if (this.services.model.gameOver) this.services.model.commitRestart(); this.navigate('play'); }
   },360,false,true);
  }
@@ -345,7 +344,9 @@ export class WorkshopScene extends Phaser.Scene {
  }
  /** Ad destinations can navigate while transition/SDK pause still owns input. */
  private commitNavigation(screen: 'menu' | 'journal' | 'play'): void {
-  this.cancelDrag(); this.effects.removeAll(true); this.screen=screen;
+  this.cancelDrag(); this.effects.removeAll(true);
+  if (this.screen === 'play' && this.mode === 'campaign' && screen !== 'play') this.services.campaign.abandon();
+  this.screen=screen;
   this.services.gate.set('startup',screen !== 'play'); this.invalidate();
  }
  private openModal(modal: Exclude<Modal,null>): void {

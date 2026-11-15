@@ -43,13 +43,12 @@ export function loadCampaign(): CampaignState {
    if (!Array.isArray(v.completedOrderIds) || !v.completedOrderIds.includes(order.id)) break;
    completedOrderIds.push(order.id);
   }
-  const active = validAttempt(v.active) && isOrderUnlocked(v.active.orderId, completedOrderIds)
-   && (v.active.status !== 'succeeded' || completedOrderIds.includes(v.active.orderId)) ? v.active : null;
-  const damaged = v.active !== null && active === null || !Array.isArray(v.completedOrderIds) || v.completedOrderIds.length !== completedOrderIds.length;
-  return { completedOrderIds, active, notice: damaged ? 'recovered' : v.notice === 'updated' || v.notice === 'recovered' ? v.notice : null };
+  // Ignore any older v2 active snapshot without treating it as corruption.
+  const damaged = !Array.isArray(v.completedOrderIds) || v.completedOrderIds.length !== completedOrderIds.length;
+  return { completedOrderIds, active: null, notice: damaged ? 'recovered' : v.notice === 'updated' || v.notice === 'recovered' ? v.notice : null };
  } catch { return empty('recovered'); }
 }
 export function saveCampaign(state: CampaignState): void {
- try { localStorage.setItem(CAMPAIGN_KEY, JSON.stringify({ app: 'block-workshop', mode: 'campaign', schemaVersion: 2, catalogVersion: 2, targetRulesVersion: 2, ...state })); }
+ try { localStorage.setItem(CAMPAIGN_KEY, JSON.stringify({ app: 'block-workshop', mode: 'campaign', schemaVersion: 2, catalogVersion: 2, targetRulesVersion: 2, completedOrderIds: state.completedOrderIds, active: null, notice: state.notice ?? null })); }
  catch { /* Storage denial must not interrupt a playable session. */ }
 }
