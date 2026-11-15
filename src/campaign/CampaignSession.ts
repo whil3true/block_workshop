@@ -41,7 +41,11 @@ export function placeCampaign(state: CampaignAttempt, slot: number, row: number,
 }
 export class CampaignController {
  private state: CampaignState;
- constructor(private onChange: () => void = () => {}, private canInteract: () => boolean = () => true) { this.state = loadCampaign(); if (this.state.notice) saveCampaign(this.state); }
+ constructor(private onChange: () => void = () => {}, private canInteract: () => boolean = () => true) {
+  this.state = loadCampaign();
+  // Normalize older saved attempts to achievements-only storage on startup.
+  saveCampaign(this.state);
+ }
  get notice(): CampaignState['notice'] { return this.state.notice; }
  acknowledgeNotice(): void { this.state = { ...this.state, notice: null }; this.persist(); }
  get active(): CampaignAttempt | null { return this.state.active; }
