@@ -41,7 +41,9 @@ test('all three orders: exit and reload discard partial play but earned completi
  await drag(page,0,8,4);
  expect((await campaign(page))?.active??null).toBeNull();
  await click(page,240,117);await page.screenshot({path:info.outputPath('goal-details-ru.png')});await click(page,240,667);
- await click(page,49,45); // Abandon order 01.
+ await click(page,49,45); // Warn before abandoning order 01.
+ await page.screenshot({path:info.outputPath('leave-order-confirm-ru.png')});
+ await click(page,240,518); // Confirm discard.
  await click(page,240,278);
  // Same first slot and position must be available again, proving a fresh attempt.
  await complete(page,WITNESSES[0]);
@@ -76,6 +78,7 @@ for(const [index,order] of CAMPAIGN_CATALOG.entries()){
   await dragMove(page,WITNESSES[index]![0]!);
   expect((await campaign(page))?.active??null).toBeNull();
   await click(page,49,45); // Leave the partial attempt.
+  await click(page,240,518); // Confirm discard.
   const other=index===0?1:0;
   await click(page,240,278+other*135);
   await click(page,49,45);

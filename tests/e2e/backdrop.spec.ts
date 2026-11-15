@@ -62,7 +62,7 @@ test('order journal removes its settings hit area and retains Back navigation',a
  expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key) ?? 'null')?.active ?? null,CAMPAIGN_KEY)).toBeNull();
  await click(page,431,45);await click(page,150,230);
  await expect(page.locator('html')).toHaveAttribute('lang','ru');await click(page,240,667);
- await click(page,49,45);await click(page,49,45);await click(page,240,580);await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(1);
+ await click(page,49,45);await click(page,240,518);await click(page,49,45);await click(page,240,580);await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(1);
 });
 
 test('rotation with an open modal keeps one dim across asymmetric safe areas',async({page},info)=>{
