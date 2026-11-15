@@ -1,6 +1,6 @@
 import { hasAnyLegalPlacement, resolveClears } from '../engine';
 import { findPieceById, PIECE_FAMILIES } from '../pieces';
-import { CAMPAIGN_CATALOG, findOrder, isOrderUnlocked } from './CampaignCatalog';
+import { CAMPAIGN_CATALOG, findOrder } from './CampaignCatalog';
 import { initialTargets } from './OrderRules';
 import type { CampaignAttempt } from './CampaignSession';
 export const LEGACY_CAMPAIGN_KEY = 'block-workshop:campaign:v1';

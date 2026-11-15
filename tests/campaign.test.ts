@@ -7,6 +7,8 @@ import { canPlace, resolveClears, type CellState } from '../src/engine';
 import { findPieceById } from '../src/pieces';
 import { createModel } from '../src/model';
 import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS, RECOVERY_PATHS } from './campaign-witnesses';
+const simulate = (state: CampaignAttempt, move: readonly number[]) => placeCampaign(state,move[0]!,move[1]!,move[2]!);
+const step = (controller: CampaignController, move: readonly number[]) => controller.place(move[0]!,move[1]!,move[2]!);
 beforeEach(()=>localStorage.clear());
 const prefix = (index: number) => CAMPAIGN_CATALOG.slice(0,index).map(o=>o.id);
 function replay(state: CampaignAttempt, moves: readonly (readonly [number,number,number])[]): CampaignAttempt {
@@ -180,7 +182,7 @@ it('every entry of every order starts fresh; leaving discards transient state bu
   expect(c.start(order.id)).toBe(true);
   const partial=placeCampaign(c.active!,...WITNESSES[index]![0]!);
   expect(partial.status).toBe('running');
-  expect(c.place(...WITNESSES[index]![0]!)).toBe(true);
+  expect(step(c,WITNESSES[index]![0]!)).toBe(true);
   expect(c.active).toEqual(partial);
   expect(loadCampaign().active).toBeNull();
   c.abandon();
@@ -188,10 +190,10 @@ it('every entry of every order starts fresh; leaving discards transient state bu
   expect(c.completed).toEqual(prefix(index));
   expect(c.start(order.id)).toBe(true);
   expect(c.active).toEqual(initialAttempt(order));
-  c.place(...WITNESSES[index]![0]!);
+  step(c,WITNESSES[index]![0]!);
   expect(c.start(order.id)).toBe(true); // Re-enter without visiting another order.
   expect(c.active).toEqual(initialAttempt(order));
-  for(const move of WITNESSES[index]!)expect(c.place(...move)).toBe(true);
+  for(const move of WITNESSES[index]!)expect(step(c,move)).toBe(true);
   expect(c.active?.status).toBe('succeeded');
   expect(c.completed).toContain(order.id);
   expect(loadCampaign().active).toBeNull();
@@ -206,22 +208,22 @@ it('completed journal progress survives replay and abandonment while live progre
  const order=CAMPAIGN_CATALOG[0]!;
  const c=new CampaignController();
  expect(c.start(order.id)).toBe(true);
- expect(c.place(...WITNESSES[0]![0]!)).toBe(true);
+ expect(step(c,WITNESSES[0]![0]!)).toBe(true);
  expect(loadCampaign().active).toBeNull();
  c.abandon();
  expect(journalProgress(order.fragments,false,null)).toBeNull();
  expect(c.start(order.id)).toBe(true);
- for(const move of WITNESSES[0]!)c.place(...move);
+ for(const move of WITNESSES[0]!)step(c,move);
  expect(c.completed).toContain(order.id);
  expect(journalProgress(order.fragments,true,null)).toEqual({total:4,removed:4,remaining:0});
  c.start(order.id);
- c.place(...WITNESSES[0]![0]!);
+ step(c,WITNESSES[0]![0]!);
  c.abandon();
  expect(new CampaignController().completed).toContain(order.id);
  expect(journalProgress(order.fragments,true,null)).toEqual({total:4,removed:4,remaining:0});
 });
 it('legacy v2 active snapshot is ignored without migration alert or progress loss',()=>{
- const order=CAMPAIGN_CATALOG[0]!, partial=placeCampaign(initialAttempt(order),...WITNESSES[0]![0]!);
+ const order=CAMPAIGN_CATALOG[0]!, partial=simulate(initialAttempt(order),WITNESSES[0]![0]!);
  localStorage.setItem(CAMPAIGN_KEY,JSON.stringify({app:'block-workshop',mode:'campaign',schemaVersion:2,catalogVersion:2,targetRulesVersion:2,completedOrderIds:[order.id],active:partial,notice:null}));
  const c=new CampaignController();
  expect(c.active).toBeNull();

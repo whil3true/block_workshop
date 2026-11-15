@@ -27,6 +27,7 @@ async function seedAchievements(page: Page, completedOrderIds: string[] = [], ol
 const complete = (page: Page, moves: readonly (readonly [number,number,number])[]) =>
  moves.reduce<Promise<void>>(async (previous,[slot,row,col])=>{await previous;await drag(page,slot,row,col);},Promise.resolve());
 
+const dragMove = (page: Page, move: readonly number[]) => drag(page,move[0]!,move[1]!,move[2]!);
 test.use({viewport:{width:360,height:640}});
 
 test('all three orders: exit and reload discard partial play but earned completions and Classic remain',async({page},info)=>{
@@ -50,7 +51,7 @@ test('all three orders: exit and reload discard partial play but earned completi
  await complete(page,WITNESSES[1]);
  expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[1]!.id);
  await click(page,240,480); // Order 03 from victory.
- await drag(page,...WITNESSES[2]![0]!);
+ await dragMove(page,WITNESSES[2]![0]!);
  await page.screenshot({path:info.outputPath('order-03-partial.png')});
  await click(page,92,117);await page.screenshot({path:info.outputPath('fragment-A-partial.png')});await click(page,240,667);
  await readyReload(page); // A page reload also abandons an incomplete order.
@@ -72,7 +73,7 @@ for(const [index,order] of CAMPAIGN_CATALOG.entries()){
   await seedAchievements(page,CAMPAIGN_CATALOG.map(o=>o.id));
   await seed(page,{locale:'en'});await open(page);await click(page,240,412);
   await click(page,240,278+index*135);
-  await drag(page,...WITNESSES[index]![0]!);
+  await dragMove(page,WITNESSES[index]![0]!);
   expect((await campaign(page))?.active??null).toBeNull();
   await click(page,49,45); // Leave the partial attempt.
   const other=index===0?1:0;
@@ -80,7 +81,7 @@ for(const [index,order] of CAMPAIGN_CATALOG.entries()){
   await click(page,49,45);
   await click(page,240,278+index*135);
   const initial=await page.screenshot({path:info.outputPath(`order-${index+1}-restart-initial.png`)});
-  await drag(page,...WITNESSES[index]![0]!);
+  await dragMove(page,WITNESSES[index]![0]!);
   const after=await page.screenshot({path:info.outputPath(`order-${index+1}-restart-first-move.png`)});
   expect(after.equals(initial),'Restarted order should accept first piece again').toBe(false);
   await complete(page,WITNESSES[index]!.slice(1));
@@ -169,12 +170,12 @@ for(const width of [320,360])for(const locale of ['ru','en'])
   await page.screenshot({path:info.outputPath(`menu-${locale}-${width}.png`)});
   await click(page,240,412);await page.screenshot({path:info.outputPath('back-centered.png')});await click(page,240,548);
   await page.screenshot({path:info.outputPath(`three-fragments-${locale}-${width}.png`)});
-  await drag(page,...WITNESSES[2]![0]!);
+  await dragMove(page,WITNESSES[2]![0]!);
   await page.setViewportSize({width:852,height:393});await frames(page);await frames(page);
   const paper=await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundImage);
   if(process.env['EXPECT_COZY_ART']==='1')expect(paper).toContain('paper.webp');
   await page.screenshot({path:info.outputPath(`landscape-${locale}.png`)});
-  await drag(page,...WITNESSES[2]![1]!);
+  await dragMove(page,WITNESSES[2]![1]!);
   await page.setViewportSize({width:1280,height:800});await frames(page);
   await page.screenshot({path:info.outputPath(`desktop-${locale}.png`)});
  });
