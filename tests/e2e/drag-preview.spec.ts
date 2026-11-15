@@ -51,20 +51,24 @@ for(const mode of ['classic','campaign'] as const) {
   }
  });
 
- test(`${mode}: interruptions restore source without changing either save`,async({page})=>{
-  await page.setViewportSize({width:393,height:852});await start(page,mode);
-  const source=await region(page,30,626,120,104),header=await region(page,0,0,480,70),saved=await saves(page);
-  for(const reason of ['pointercancel','blur','pagehide','resize','modal','escape']) {
+
+ // A single six-interruption case exceeded Chromium software-renderer time budget,
+ // despite its assertions passing individually. Each interruption now has its own
+ // isolated 90-second budget and actionable failure trace.
+ for(const reason of ['pointercancel','blur','pagehide','resize','modal','escape'] as const) {
+  test(`${mode}: ${reason} restores held source without changing either save`,async({page})=>{
+   await page.setViewportSize({width:393,height:852});await start(page,mode);
+   const source=await region(page,30,626,120,104),saved=await saves(page);
    await hold(page,0);await move(page,240,310);
    expect((await region(page,30,626,120,104)).equals(source)).toBe(false);
    if(reason==='pointercancel')await page.locator('canvas').dispatchEvent('pointercancel',{pointerId:1});
    if(reason==='blur')await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
    if(reason==='pagehide')await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    if(reason==='resize')await page.setViewportSize({width:852,height:393});
-   // A second mouse down exercises the actual modal hit zone while holding.
    if(reason==='modal') {
+    const header=await region(page,0,0,480,70);
     await click(page,431,45);
-    expect((await region(page,0,0,480,70)).equals(header),'Settings actually opened above the held drag').toBe(false);
+    expect((await region(page,0,0,480,70)).equals(header),'Settings actually opened above held drag').toBe(false);
    }
    if(reason==='escape')await page.keyboard.press('Escape');
    await frames(page);await move(page,42,178);await page.mouse.up();await frames(page);
@@ -72,15 +76,16 @@ for(const mode of ['classic','campaign'] as const) {
    if(reason==='pagehide')await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
    if(reason==='resize')await page.setViewportSize({width:393,height:852});
    if(reason==='modal')await click(page,240,667);
-   if(reason==='escape') {
+   if(reason==='escape'){
     await click(page,240,mode==='classic'?565:412);
     if(mode==='campaign')await click(page,240,278);
    }
    expect(await saves(page),`${reason} preserves saves after returning to play`).toEqual(saved);
    await frames(page);await frames(page);
    expect((await region(page,30,626,120,104)).equals(source),`${reason} restores source`).toBe(true);
-  }
- });
+  });
+ }
+
 }
 
 test('Chromium native Android touch: lift, both gutters, touchcancel and orientation',async({page,browserName},info)=>{
