@@ -20,7 +20,7 @@ import { BOARD, TRAY, PIECE_COLORS, TILE_MATERIAL, boardAnchor } from './BoardGe
 import { preloadCozyAssets, paperSurface, syncViewportPaper } from './CozyAssets';
 import { VISUAL_COLORS } from './VisualTokens';
 
-type Modal = 'settings' | 'restart' | 'reward' | 'goal' | 'campaignNotice' | null;
+type Modal = 'settings' | 'restart' | 'reward' | 'goal' | 'campaignNotice' | 'leaveOrder' | null;
 export interface SceneServices {
  model: ModelApi; campaign: CampaignController; gate: PauseGate; locale: LocaleRuntime; manager: AudioManager; audio: AudioApi;
  platform: PlatformService; flow: AdFlow<TrayOffer>; density: number;
@@ -40,6 +40,7 @@ export class WorkshopScene extends Phaser.Scene {
  private mode: 'classic' | 'campaign' = 'classic';
  private chapter = 1;
  private modal: Modal = null;
+ private pendingExit: 'journal' | 'menu' | null = null;
  private ready = false;
  private selectedFragment: string | null = null;
  private cover = false;
@@ -70,7 +71,9 @@ export class WorkshopScene extends Phaser.Scene {
   this.input.on('gameout', this.cancelDrag, this);
   this.input.keyboard?.on('keydown-ESC', () => {
    if (this.externalBlock()) return;
-   if (this.modal) this.closeModal(); else if (this.screen !== 'menu') this.navigate('menu');
+   if (this.modal) this.closeModal();
+   else if (this.screen === 'play' && this.mode === 'campaign') this.requestCampaignExit('menu');
+   else if (this.screen !== 'menu') this.navigate('menu');
   });
   const cancel = (): void => this.cancelDrag();
   this.game.canvas.addEventListener('pointercancel', cancel);
@@ -230,7 +233,7 @@ export class WorkshopScene extends Phaser.Scene {
  private drawPlay(): void {
   const { locale, model, campaign, platform } = this.services;
   const active = campaign.active;
-  this.header(this.mode === 'classic' ? locale.t('classic') : `${locale.t('order')} ${CAMPAIGN_CATALOG.findIndex(o => o.id === active?.orderId)+1}`,() => this.navigate(this.mode === 'campaign' ? 'journal' : 'menu'));
+  this.header(this.mode === 'classic' ? locale.t('classic') : `${locale.t('order')} ${CAMPAIGN_CATALOG.findIndex(o => o.id === active?.orderId)+1}`,() => this.mode === 'campaign' ? this.requestCampaignExit('journal') : this.navigate('menu'));
   if (this.mode === 'classic') {
    for (const [x,word,value] of [[126,'score',model.score],[354,'best',model.bestScore]] as const) {
     this.surface('panel',x,114,212,62);
@@ -279,7 +282,7 @@ export class WorkshopScene extends Phaser.Scene {
    if (!model.rewardUsed && model.canReward) this.button('reward','reward',360,759,() => this.openModal('reward'),212,platform.id !== 'yandex');
    if (model.gameOver) this.drawClassicOver();
   } else {
-   this.button('journal','toOrders',360,759,() => this.navigate('journal'),212);
+   this.button('journal','toOrders',360,759,() => this.requestCampaignExit('journal'),212);
    if (active?.status !== 'running') this.drawCampaignResult();
   }
  }
@@ -337,6 +340,17 @@ export class WorkshopScene extends Phaser.Scene {
   this.button('result-retry','retry',240,553,() => transition(() => this.startOrder(order.id,true)),360);
   this.button('result-menu',success && next ? 'toOrders' : 'menu',240,626,() => this.navigate(success && next ? 'journal' : 'menu'),360);
  }
+ /** Confirm discarding an unfinished short order only when the player has made a move. */
+ private requestCampaignExit(destination: 'journal' | 'menu'): void {
+  const active = this.services.campaign.active;
+  if (this.screen === 'play' && this.mode === 'campaign' && active?.status === 'running' && active.moves > 0) {
+   this.pendingExit = destination;
+   this.openModal('leaveOrder');
+   if (this.modal !== 'leaveOrder') this.pendingExit = null;
+   return;
+  }
+  this.navigate(destination);
+ }
  private navigate(screen: 'menu' | 'journal' | 'play'): void {
   if (this.externalBlock() || this.modal || this.services.flow.busy) return;
   this.commitNavigation(screen);
@@ -357,7 +371,7 @@ export class WorkshopScene extends Phaser.Scene {
   }
   this.cancelDrag(); this.effects.removeAll(true); this.modal=modal; this.services.gate.set('manual',true); this.invalidate();
  }
- private closeModal(): void { this.modal=null; this.offering=null; this.services.gate.set('manual',false); this.invalidate(); }
+ private closeModal(): void { this.modal=null; this.pendingExit=null; this.offering=null; this.services.gate.set('manual',false); this.invalidate(); }
  private drawModal(): void {
   const { locale, manager } = this.services;
   this.overlay();
@@ -389,6 +403,16 @@ export class WorkshopScene extends Phaser.Scene {
    this.text(240,274,locale.t('campaignUpdated'),'screenTitle',390);
    this.text(240,371,locale.t(this.services.campaign.notice === 'updated' ? 'campaignReset' : 'campaignRecovered'),'body',370);
    this.button('acknowledge-campaign','close',240,508,() => { this.services.campaign.acknowledgeNotice(); this.closeModal(); },320,false,true);
+  } else if (this.modal === 'leaveOrder') {
+   this.text(240,273,locale.t('leaveOrderTitle'),'screenTitle',390);
+   this.text(240,358,locale.t('leaveOrderWarning'),'body',360);
+   // Cancel is the primary safe action. Progress is discarded only on confirmation.
+   this.button('leave-order-stay','stay',240,450,() => this.closeModal(),320,false,true);
+   this.button('leave-order-confirm','leaveOrderAction',240,518,() => {
+    const destination = this.pendingExit;
+    this.closeModal();
+    if (destination) this.navigate(destination);
+   },320);
   } else {
    const restart=this.modal === 'restart', campaign=this.mode === 'campaign';
    this.text(240,273,locale.t(restart ? campaign ? 'retry' : 'newGame' : 'reward'),'screenTitle',400);

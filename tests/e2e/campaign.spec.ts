@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { click, drag, frames, open, seed, snapshot } from './helpers';
+import { click, drag, frames, open, point, seed, snapshot } from './helpers';
 import { CAMPAIGN_CATALOG } from '../../src/campaign/CampaignCatalog';
 import { initialAttempt, placeCampaign, type CampaignAttempt } from '../../src/campaign/CampaignSession';
 import { CAMPAIGN_KEY, LEGACY_CAMPAIGN_KEY } from '../../src/campaign/CampaignStore';
@@ -28,6 +28,10 @@ const complete = (page: Page, moves: readonly (readonly [number,number,number])[
  moves.reduce<Promise<void>>(async (previous,[slot,row,col])=>{await previous;await drag(page,slot,row,col);},Promise.resolve());
 
 const dragMove = (page: Page, move: readonly number[]) => drag(page,move[0]!,move[1]!,move[2]!);
+const boardPixels = async (page: Page) => {
+ const a=await point(page,20,156), b=await point(page,460,596);
+ return page.screenshot({clip:{x:a.x,y:a.y,width:b.x-a.x,height:b.y-a.y}});
+};
 test.use({viewport:{width:360,height:640}});
 
 test('all three orders: exit and reload discard partial play but earned completions and Classic remain',async({page},info)=>{
@@ -41,7 +45,9 @@ test('all three orders: exit and reload discard partial play but earned completi
  await drag(page,0,8,4);
  expect((await campaign(page))?.active??null).toBeNull();
  await click(page,240,117);await page.screenshot({path:info.outputPath('goal-details-ru.png')});await click(page,240,667);
- await click(page,49,45); // Abandon order 01.
+ await click(page,49,45); // Warn before abandoning order 01.
+ await page.screenshot({path:info.outputPath('leave-order-confirm-ru.png')});
+ await click(page,240,518); // Confirm discard.
  await click(page,240,278);
  // Same first slot and position must be available again, proving a fresh attempt.
  await complete(page,WITNESSES[0]);
@@ -76,6 +82,7 @@ for(const [index,order] of CAMPAIGN_CATALOG.entries()){
   await dragMove(page,WITNESSES[index]![0]!);
   expect((await campaign(page))?.active??null).toBeNull();
   await click(page,49,45); // Leave the partial attempt.
+  await click(page,240,518); // Confirm discard.
   const other=index===0?1:0;
   await click(page,240,278+other*135);
   await click(page,49,45);
@@ -195,3 +202,73 @@ for(const locale of ['ru','en'])for(const index of [0,1,2])
   }
   expect((await campaign(page))?.completedOrderIds).toHaveLength(3);
  });
+
+for(const locale of ['ru','en'] as const) {
+ test(`campaign back warning lets player stay, then confirms discard (${locale})`,async({page},info)=>{
+  await seed(page,{locale});await open(page);await click(page,240,412);await click(page,240,278);
+  await drag(page,0,8,4); // A changed, unfinished order.
+  const before=await boardPixels(page);
+  await click(page,49,45);
+  const warning=await page.screenshot({path:info.outputPath(`leave-warning-${locale}.png`)});
+  expect(warning.byteLength).toBeGreaterThan(0);
+  expect((await campaign(page))?.active??null).toBeNull();
+  await click(page,240,450); // Keep playing.
+  const returned=await boardPixels(page);
+  expect(returned.equals(before),'Cancel leaves current board intact').toBe(true);
+  await drag(page,1,8,7); // Still the same incomplete attempt, not reset.
+  await click(page,49,45);await click(page,240,518); // Confirm leave.
+  const journal=await page.screenshot({path:info.outputPath(`journal-after-confirm-${locale}.png`)});
+  await click(page,240,278); // Reenter starts at the beginning.
+  const fresh=await page.screenshot();
+  expect(fresh.equals(journal),'Confirmation navigates away from the game').toBe(false);
+  await complete(page,WITNESSES[0]);
+  expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+ });
+}
+
+test('no warning before the first move; bottom Orders button confirms after a move',async({page},info)=>{
+ await seed(page,{locale:'ru'});await open(page);await click(page,240,412);await click(page,240,278);
+ await click(page,49,45); // No progress yet, so leave directly.
+ await click(page,240,278);await drag(page,0,8,4);
+ const before=await boardPixels(page);
+ await click(page,360,759); // The lower Orders button must warn too.
+ await page.screenshot({path:info.outputPath('orders-button-exit-warning.png')});
+ await click(page,240,450); // Keep playing.
+ expect((await boardPixels(page)).equals(before)).toBe(true);
+ await click(page,360,759);await click(page,240,518); // Confirm exit.
+ await click(page,240,278);
+ await complete(page,WITNESSES[0]);
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
+
+test('Esc exit confirmation can be cancelled without restarting the unfinished order',async({page})=>{
+ await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
+ await drag(page,0,8,4);
+ await page.keyboard.press('Escape'); // Open the exit warning.
+ await page.keyboard.press('Escape'); // Dismiss warning and keep the active order.
+ await frames(page);
+ // Remaining solution moves must still complete the SAME attempt.
+ // A reset would restore the first piece and this two-move suffix could not finish.
+ await complete(page,WITNESSES[0]!.slice(1));
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
+
+test('Esc confirms unfinished campaign exit to main menu and re-entry starts fresh',async({page})=>{
+ await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
+ await drag(page,0,8,4);
+ await page.keyboard.press('Escape'); // Open exit warning.
+ await click(page,240,518); // Confirm exit to menu.
+ await click(page,240,412);await click(page,240,278);
+ // A fresh attempt must accept the complete original solution.
+ await complete(page,WITNESSES[0]);
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
+
+test('completed campaign result can return to menu without exit warning',async({page},info)=>{
+ await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
+ await complete(page,WITNESSES[0]);
+ await click(page,240,626); // Existing result action is not intercepted.
+ await page.screenshot({path:info.outputPath('completed-order-return.png')});
+ await click(page,240,412);
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
