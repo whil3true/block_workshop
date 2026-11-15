@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CAMPAIGN_CATALOG, CHAPTERS, isOrderUnlocked } from '../src/campaign/CampaignCatalog';
 import { CampaignController, initialAttempt, placeCampaign, type CampaignAttempt } from '../src/campaign/CampaignSession';
 import { CAMPAIGN_KEY, LEGACY_CAMPAIGN_KEY, loadCampaign, saveCampaign, validAttempt } from '../src/campaign/CampaignStore';
-import { clearTargets, fragmentProgress, initialTargets, orderProgress } from '../src/campaign/OrderRules';
+import { clearTargets, fragmentProgress, initialTargets, journalProgress, orderProgress } from '../src/campaign/OrderRules';
 import { canPlace, resolveClears, type CellState } from '../src/engine';
 import { findPieceById } from '../src/pieces';
 import { createModel } from '../src/model';
@@ -62,7 +62,13 @@ for (const [index,order] of CAMPAIGN_CATALOG.entries()) {
    const result=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,9,3);
    expect(result.moves).toBe(1);expect(result.status).toBe('failed');
    saveCampaign({active:result,completedOrderIds:prefix(index)});const controller=new CampaignController();
-   expect(controller.active).toEqual(result);expect(controller.start(order.id,true)).toBe(true);expect(controller.active).toEqual(initial);
+   expect(controller.active).toEqual(result);
+   // Selecting the same defeated order from the journal restarts it for free.
+   expect(controller.start(order.id)).toBe(true);expect(controller.active).toEqual(initial);
+   expect(new CampaignController().active).toEqual(initial);
+   // The explicit Retry action still starts a new attempt.
+   saveCampaign({active:result,completedOrderIds:prefix(index)});
+   const retry=new CampaignController();expect(retry.start(order.id,true)).toBe(true);expect(retry.active).toEqual(initial);
   });
   it('has a verified successful recovery after a genuine misplaced piece',()=>{
    const initial=initialAttempt(order), first=RECOVERY_PATHS[index]![0];
@@ -147,4 +153,36 @@ it('recovers malformed JSON, incompatible envelopes and unavailable storage',()=
 });
 it('pauses campaign placement with the shared gate',()=>{
  let paused=false;const c=new CampaignController(()=>{},()=>!paused);c.start(CAMPAIGN_CATALOG[0]!.id);paused=true;expect(c.place(0,8,4)).toBe(false);paused=false;expect(c.place(0,8,4)).toBe(true);
+});
+
+it('journal completion survives a failed replay, while a running attempt remains resumable',()=>{
+ const order=CAMPAIGN_CATALOG[0]!, initial=initialAttempt(order);
+ let controller=new CampaignController();
+ expect(controller.start(order.id)).toBe(true);
+ const inProgress=placeCampaign(initial,0,8,4);
+ expect(inProgress.status).toBe('running');
+ saveCampaign({active:inProgress,completedOrderIds:[]});
+ controller=new CampaignController();
+ expect(controller.start(order.id)).toBe(true);
+ expect(controller.active).toEqual(inProgress); // A running order must not restart.
+ for(const [slot,row,col] of WITNESSES[0]!.slice(1))controller.place(slot,row,col);
+ expect(controller.active?.status).toBe('succeeded');
+ expect(controller.completed).toContain(order.id);
+ expect(journalProgress(order.fragments,true,controller.active!.remainingTargets)).toEqual({total:4,removed:4,remaining:0});
+ expect(controller.start(order.id)).toBe(true);
+ expect(controller.active).toEqual(initial);
+ const board:CellState[][]=Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>(r+c)%2===0?null:'sq2'));
+ for(const cell of initial.remainingTargets)board[Math.floor(cell/10)]![cell%10]=order.board[Math.floor(cell/10)]![cell%10]!;
+ const failed=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,9,3);
+ expect(failed.status).toBe('failed');
+ saveCampaign({completedOrderIds:controller.completed,active:failed});
+ controller=new CampaignController();
+ expect(controller.completed).toContain(order.id);
+ expect(journalProgress(order.fragments,true,controller.active!.remainingTargets)).toEqual({total:4,removed:4,remaining:0});
+ expect(journalProgress(order.fragments,false,controller.active!.remainingTargets)).toEqual({total:4,removed:0,remaining:4});
+ expect(journalProgress(order.fragments,false,null)).toBeNull();
+ expect(controller.start(order.id)).toBe(true);
+ expect(controller.active).toEqual(initial);
+ expect(controller.completed).toContain(order.id);
+ expect(new CampaignController().completed).toContain(order.id);
 });

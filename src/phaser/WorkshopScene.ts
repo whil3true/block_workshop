@@ -12,7 +12,7 @@ import type { LocaleRuntime } from '../app/LocaleRuntime';
 import type { Word } from '../app/Localization';
 import type { CampaignController } from '../campaign/CampaignSession';
 import { CAMPAIGN_CATALOG, CHAPTERS, findOrder, isOrderUnlocked } from '../campaign/CampaignCatalog';
-import { fragmentProgress, orderProgress, type TargetFragment } from '../campaign/OrderRules';
+import { fragmentProgress, journalProgress, type TargetFragment } from '../campaign/OrderRules';
 import { configureLogicalCamera } from './Display';
 import { createPrimaryButton, createSecondaryButton, createUiText, createViewportBackdrop, createModalShell } from './UiPrimitives';
 import { createAudioVolumeSlider } from './AudioVolumeSlider';
@@ -210,7 +210,8 @@ export class WorkshopScene extends Phaser.Scene {
    const title = this.text(0,-32,order.title[locale.locale],'body',textWidth);
    const state = this.text(0,0,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',textWidth,complete ? '#5B704D' : '#7A6A60');
    const current = campaign.active?.orderId === order.id ? campaign.active : null;
-   const progress = current ? `${locale.t('removed')}: ${orderProgress(order.fragments,current.remainingTargets).removed}/${orderProgress(order.fragments,current.remainingTargets).total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
+   const stats = journalProgress(order.fragments,complete,current?.remainingTargets ?? null);
+   const progress = stats ? `${locale.t('removed')}: ${stats.removed}/${stats.total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
    const detail = this.text(0,30,progress,'caption',textWidth,'#98513F');
    const copy = this.add.container(textX,y,[title,state,detail]); this.root.add(copy);
    // Center the measured copy as one group; exclude the raster's bottom shadow.
@@ -225,7 +226,7 @@ export class WorkshopScene extends Phaser.Scene {
   },360,false,true);
  }
  private startOrder(id: string, replay = false): void {
-  if (this.services.campaign.start(id,replay || this.services.campaign.active?.orderId === id && this.services.campaign.active.status === 'succeeded')) { this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
+  if (this.services.campaign.start(id,replay)) { this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
  }
  private drawPlay(): void {
   const { locale, model, campaign, platform } = this.services;

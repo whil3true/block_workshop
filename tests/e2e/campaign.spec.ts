@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { click, drag, frames, open, seed, snapshot } from './helpers';
 import { CAMPAIGN_CATALOG } from '../../src/campaign/CampaignCatalog';
-import { initialAttempt, type CampaignAttempt } from '../../src/campaign/CampaignSession';
+import { initialAttempt, placeCampaign, type CampaignAttempt } from '../../src/campaign/CampaignSession';
 import { CAMPAIGN_KEY, LEGACY_CAMPAIGN_KEY } from '../../src/campaign/CampaignStore';
 import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS } from '../campaign-witnesses';
 import type { Page } from '@playwright/test';
@@ -71,8 +71,10 @@ test('defeat persists after reload; retry is exact and free',async({page},info)=
  const active={...initial,board,trayIds:['single','square-3','square-3'],moves:3,nextTrayIndex:2};
  await seedAttempt(page,active);await seed(page);await open(page);await click(page,240,412);await click(page,240,278);await drag(page,0,9,3);
  expect((await campaign(page))!.active.status).toBe('failed');await page.screenshot({path:info.outputPath('order-failed.png')});
- const failed=(await campaign(page))!;await readyReload(page);await click(page,240,412);await click(page,240,278);expect((await campaign(page))!.active).toEqual(failed.active);
- await click(page,240,553);expect((await campaign(page))!.active).toEqual(initial);
+ const failed=(await campaign(page))!;await readyReload(page);await click(page,240,412);
+ expect((await campaign(page))!.active).toEqual(failed.active); // Failed snapshot persists until reselected.
+ await click(page,240,278);expect((await campaign(page))!.active).toEqual(initial);
+ expect((await campaign(page))!.active.status).toBe('running');
 });
 for(const [label,moves] of [['column first',COLUMN_FIRST],['both axes together',SIMULTANEOUS]] as const) {
  test(`second order clears ${label} without a sequence gate`,async({page},info)=>{
@@ -134,4 +136,19 @@ for(const locale of ['ru','en'])for(const index of [0,1,2])test(`balanced ${inde
   await click(page,240,667);
  }
  expect((await campaign(page))!.active.moves).toBe(0);
+});
+
+test('completed journal remains completed after failed replay; reselecting starts fresh',async({page},info)=>{
+ const order=CAMPAIGN_CATALOG[0]!, initial=initialAttempt(order);
+ const board:CellState[][]=Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>(r+c)%2===0?null:'sq2'));
+ for(const cell of initial.remainingTargets)board[Math.floor(cell/10)]![cell%10]=order.board[Math.floor(cell/10)]![cell%10]!;
+ const failed=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,9,3);
+ expect(failed.status).toBe('failed');
+ await seedAttempt(page,failed,[order.id]);await seed(page,{locale:'ru'});await open(page);
+ await click(page,240,412);
+ expect((await campaign(page))!.completedOrderIds).toContain(order.id);
+ await page.screenshot({path:info.outputPath('completed-journal-after-failed-replay.png')});
+ await click(page,240,278);
+ expect((await campaign(page))!.active).toEqual(initial);
+ expect((await campaign(page))!.completedOrderIds).toContain(order.id);
 });
