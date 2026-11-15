@@ -241,7 +241,7 @@ test('no warning before the first move; bottom Orders button confirms after a mo
  expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
 });
 
-test('Esc confirms unfinished campaign exit to main menu, with cancellation available',async({page},info)=>{
+test('Esc confirms unfinished campaign exit to main menu, with cancellation available',async({page})=>{
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
  await drag(page,0,8,4);
  const before=await boardPixels(page);
