@@ -20,6 +20,7 @@ async function start(page: Page,mode: 'classic'|'campaign') {
 for(const mode of ['classic','campaign'] as const) {
  test(`${mode}: all three source figures hide, reject, restore, place and refill`,async({page},info)=>{
   await page.setViewportSize({width:393,height:852});await start(page,mode);
+  const savedOnEntry=await saves(page);
   let firstEmpty: Buffer | null=null;
   for(const slot of [0,1,2]) {
    const source=await region(page,[30,180,330][slot]!,626,120,104),saved=await saves(page);
@@ -46,7 +47,7 @@ for(const mode of ['classic','campaign'] as const) {
   else {
    expect(firstEmpty).not.toBeNull();
    expect((await region(page,30,626,120,104)).equals(firstEmpty!),'Campaign also refills the first source slot').toBe(false);
-   expect((await saves(page)).campaign).toBe((await saves(page)).campaign);
+   expect((await saves(page)).campaign,'Partial campaign moves never update persistent saves').toBe(savedOnEntry.campaign);
   }
  });
 
