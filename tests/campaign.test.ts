@@ -31,19 +31,28 @@ for (const [index,order] of CAMPAIGN_CATALOG.entries()) {
    expect(state.status).toBe('succeeded');expect(state.remainingTargets).toEqual([]);expect(state.moves).toBe(WITNESSES[index]!.length);
    expect(placeCampaign(state,0,0,0)).toBe(state);
   });
-  it('restores every move exactly, including partial masks and success, without touching classic or settings',()=>{
+  it('keeps progress only in memory and persists earned completion without changing Classic',()=>{
    const classic=createModel({rng:()=>.1});classic.place(0,0,0);
-   localStorage.setItem('block-workshop:ui-locale','en');localStorage.setItem('block-workshop:audio-settings','{"musicVolume":0.3,"sfxVolume":0.8}');
+   localStorage.setItem('block-workshop:ui-locale','en');
+   localStorage.setItem('block-workshop:audio-settings','{"musicVolume":0.3,"sfxVolume":0.8}');
    const unrelated=Object.fromEntries(Object.entries(localStorage));
-   saveCampaign({completedOrderIds:prefix(index),active:initialAttempt(order)});let controller=new CampaignController();
+   saveCampaign({completedOrderIds:prefix(index),active:null});
+   let controller=new CampaignController();
+   expect(controller.start(order.id)).toBe(true);
    for(const move of WITNESSES[index]!) {
-    expect(controller.place(move[0],move[1],move[2])).toBe(true);const before=controller.active;
-    controller=new CampaignController();expect(controller.active).toEqual(before);
+    expect(controller.place(move[0],move[1],move[2])).toBe(true);
+    const current=controller.active!;
+    expect(validAttempt(current)).toBe(true);
+    expect(loadCampaign().active).toBeNull();
    }
+   expect(controller.active?.status).toBe('succeeded');
    expect(controller.completed).toContain(order.id);
    for(const [key,value] of Object.entries(unrelated))expect(localStorage.getItem(key)).toBe(value);
-   expect(controller.start(order.id,true)).toBe(true);expect(controller.active).toEqual(initialAttempt(order));
-   expect(controller.completed.filter(id=>id===order.id)).toHaveLength(1);
+   controller=new CampaignController();
+   expect(controller.active).toBeNull();
+   expect(controller.completed).toContain(order.id);
+   expect(controller.start(order.id,true)).toBe(true);
+   expect(controller.active).toEqual(initialAttempt(order));
   });
   it('clearing an entirely new line earns score but no target progress',()=>{
    let state=initialAttempt(order);
@@ -54,21 +63,21 @@ for (const [index,order] of CAMPAIGN_CATALOG.entries()) {
    const next=placeCampaign(state,0,row,5);
    expect(next.score).toBeGreaterThan(state.score);expect(next.remainingTargets).toEqual(state.remainingTargets);expect(next.status).toBe('running');
   });
-  it('persists actual blocked-tray defeat and retries with the exact free initial state',()=>{
+  it('does not restore a defeated attempt from storage; free retry starts at exact initial state',()=>{
    const initial=initialAttempt(order);
    const board:CellState[][]=Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>(r+c)%2===0?null:'sq2'));
    for(const cell of initial.remainingTargets)board[Math.floor(cell/10)]![cell%10]=order.board[Math.floor(cell/10)]![cell%10]!;
-   // No completed row/column; isolated empty cell and two impossible 3x3 squares.
-   const result=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,9,3);
-   expect(result.moves).toBe(1);expect(result.status).toBe('failed');
-   saveCampaign({active:result,completedOrderIds:prefix(index)});const controller=new CampaignController();
-   expect(controller.active).toEqual(result);
-   // Selecting the same defeated order from the journal restarts it for free.
-   expect(controller.start(order.id)).toBe(true);expect(controller.active).toEqual(initial);
-   expect(new CampaignController().active).toEqual(initial);
-   // The explicit Retry action still starts a new attempt.
-   saveCampaign({active:result,completedOrderIds:prefix(index)});
-   const retry=new CampaignController();expect(retry.start(order.id,true)).toBe(true);expect(retry.active).toEqual(initial);
+   const failed=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,9,3);
+   expect(failed.status).toBe('failed');
+   // An older v2 record may still contain the defeated attempt; it must not resume.
+   const raw={app:'block-workshop',mode:'campaign',schemaVersion:2,catalogVersion:2,targetRulesVersion:2,completedOrderIds:prefix(index),active:failed};
+   localStorage.setItem(CAMPAIGN_KEY,JSON.stringify(raw));
+   const controller=new CampaignController();
+   expect(controller.active).toBeNull();
+   expect(controller.start(order.id)).toBe(true);
+   expect(controller.active).toEqual(initial);
+   expect(controller.start(order.id,true)).toBe(true);
+   expect(controller.active).toEqual(initial);
   });
   it('has a verified successful recovery after a genuine misplaced piece',()=>{
    const initial=initialAttempt(order), first=RECOVERY_PATHS[index]![0];
@@ -91,11 +100,11 @@ it('unions row/column intersections once and advances multiple fragments indepen
  const initial=initialAttempt(CAMPAIGN_CATALOG[1]!), next=replay(initial,SIMULTANEOUS);
  expect(orderProgress(CAMPAIGN_CATALOG[1]!.fragments,next.remainingTargets)).toEqual({total:8,remaining:0,removed:8});
 });
-it('partial fragment progress persists; refilling and clearing former target coordinates never reactivates them',()=>{
+it('partial fragment progress stays in the current attempt; replacements never reactivate targets',()=>{
  const order=CAMPAIGN_CATALOG[2]!, initial=initialAttempt(order);
  const partial=replay(initial,[WITNESSES[2][0]]);
  expect(fragmentProgress(order.fragments[0]!,partial.remainingTargets)).toEqual({total:4,removed:2,remaining:2});
- saveCampaign({active:partial,completedOrderIds:prefix(2)});expect(loadCampaign().active).toEqual(partial);
+ saveCampaign({active:partial,completedOrderIds:prefix(2)});expect(loadCampaign().active).toBeNull();
  // Put ordinary replacement tiles at (4,0),(4,1), preserving the other two target cells.
  let next=placeCampaign({...partial,trayIds:['domino-h','single','single']},0,4,0);
  expect(next.board[4]![0]).not.toBeNull();expect(next.remainingTargets).toEqual(partial.remainingTargets);
@@ -117,23 +126,31 @@ it('unlocks only released orders; a completed replay preserves completion',()=>{
  expect(isOrderUnlocked(CAMPAIGN_CATALOG[1]!.id,controller.completed)).toBe(true);controller.start(CAMPAIGN_CATALOG[0]!.id,true);expect(controller.completed).toHaveLength(1);
  expect(CHAPTERS).toHaveLength(3);expect(CHAPTERS[1].orderIds).toHaveLength(0);expect(CHAPTERS[2].orderIds).toHaveLength(0);
 });
-it('restores deterministic fallback RNG and tray cursor beyond fixed deals',()=>{
+it('keeps deterministic fallback RNG and tray cursor within a single attempt',()=>{
  let state=initialAttempt(CAMPAIGN_CATALOG[0]!), fallbackReached=false;
  for(let i=0;i<65 && state.status==='running';i++) {
   let chosen: CampaignAttempt | null=null;
   outer:for(let s=0;s<3;s++)for(let r=0;r<10;r++)for(let c=0;c<10;c++) {
    const next=placeCampaign(state,s,r,c);if(next!==state && next.remainingTargets.length===4 && next.status==='running'){chosen=next;break outer;}
   }
-  if(!chosen)break;state=chosen;saveCampaign({active:state,completedOrderIds:[]});expect(loadCampaign().active).toEqual(state);
+  if(!chosen)break;state=chosen;saveCampaign({active:state,completedOrderIds:[]});expect(loadCampaign().active).toBeNull();
   if(state.nextTrayIndex>CAMPAIGN_CATALOG[0]!.trays.length)fallbackReached=true;
  }
- expect(fallbackReached).toBe(true);const restored=loadCampaign().active!;
+ expect(fallbackReached).toBe(true);const restored=state;
  for(let s=0;s<3;s++)for(let r=0;r<10;r++)for(let c=0;c<10;c++)expect(placeCampaign(restored,s,r,c)).toEqual(placeCampaign(state,s,r,c));
 });
-for(const field of ['board','trayIds','rngState','remainingTargets','contentVersion','targetRulesVersion','nextTrayIndex','status','moves'] as const)it(`rejects damaged ${field}, retaining completed orders and other stores`,()=>{
- saveCampaign({active:initialAttempt(CAMPAIGN_CATALOG[1]!),completedOrderIds:prefix(1)});
- const raw=JSON.parse(localStorage.getItem(CAMPAIGN_KEY)!);raw.active[field]='invalid';localStorage.setItem(CAMPAIGN_KEY,JSON.stringify(raw));localStorage.setItem('block-workshop:bestScore','999');
- const loaded=loadCampaign();expect(loaded.active).toBeNull();expect(loaded.notice).toBe('recovered');expect(loaded.completedOrderIds).toEqual(prefix(1));expect(localStorage.getItem('block-workshop:bestScore')).toBe('999');
+for(const field of ['board','trayIds','rngState','remainingTargets','contentVersion','targetRulesVersion','nextTrayIndex','status','moves'] as const)it(`ignores old persisted ${field} attempts, preserving completed orders and other stores`,()=>{
+ const existing=initialAttempt(CAMPAIGN_CATALOG[1]!);
+ saveCampaign({active:existing,completedOrderIds:prefix(1)});
+ const raw=JSON.parse(localStorage.getItem(CAMPAIGN_KEY)!);
+ raw.active={...existing,[field]:'invalid'};
+ localStorage.setItem(CAMPAIGN_KEY,JSON.stringify(raw));
+ localStorage.setItem('block-workshop:bestScore','999');
+ const loaded=loadCampaign();
+ expect(loaded.active).toBeNull();
+ expect(loaded.notice).toBeNull();
+ expect(loaded.completedOrderIds).toEqual(prefix(1));
+ expect(localStorage.getItem('block-workshop:bestScore')).toBe('999');
 });
 for(const mask of [[80,80],[999],[],[0],[80,81,82]])it(`rejects invalid initial mask ${JSON.stringify(mask)}`,()=>{
  expect(validAttempt({...initialAttempt(CAMPAIGN_CATALOG[0]!),remainingTargets:mask})).toBe(false);
@@ -155,34 +172,62 @@ it('pauses campaign placement with the shared gate',()=>{
  let paused=false;const c=new CampaignController(()=>{},()=>!paused);c.start(CAMPAIGN_CATALOG[0]!.id);paused=true;expect(c.place(0,8,4)).toBe(false);paused=false;expect(c.place(0,8,4)).toBe(true);
 });
 
-it('journal completion survives a failed replay, while a running attempt remains resumable',()=>{
- const order=CAMPAIGN_CATALOG[0]!, initial=initialAttempt(order);
- let controller=new CampaignController();
- expect(controller.start(order.id)).toBe(true);
- const inProgress=placeCampaign(initial,0,8,4);
- expect(inProgress.status).toBe('running');
- saveCampaign({active:inProgress,completedOrderIds:[]});
- controller=new CampaignController();
- expect(controller.start(order.id)).toBe(true);
- expect(controller.active).toEqual(inProgress); // A running order must not restart.
- for(const [slot,row,col] of WITNESSES[0]!.slice(1))controller.place(slot,row,col);
- expect(controller.active?.status).toBe('succeeded');
- expect(controller.completed).toContain(order.id);
- expect(journalProgress(order.fragments,true,controller.active!.remainingTargets)).toEqual({total:4,removed:4,remaining:0});
- expect(controller.start(order.id)).toBe(true);
- expect(controller.active).toEqual(initial);
- const board:CellState[][]=Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>(r+c)%2===0?null:'sq2'));
- for(const cell of initial.remainingTargets)board[Math.floor(cell/10)]![cell%10]=order.board[Math.floor(cell/10)]![cell%10]!;
- const failed=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,9,3);
- expect(failed.status).toBe('failed');
- saveCampaign({completedOrderIds:controller.completed,active:failed});
- controller=new CampaignController();
- expect(controller.completed).toContain(order.id);
- expect(journalProgress(order.fragments,true,controller.active!.remainingTargets)).toEqual({total:4,removed:4,remaining:0});
- expect(journalProgress(order.fragments,false,controller.active!.remainingTargets)).toEqual({total:4,removed:0,remaining:4});
+it('every entry of every order starts fresh; leaving discards transient state but preserves completions',()=>{
+ for(const [index,order] of CAMPAIGN_CATALOG.entries()){
+  localStorage.clear();
+  saveCampaign({active:null,completedOrderIds:prefix(index)});
+  let c=new CampaignController();
+  expect(c.start(order.id)).toBe(true);
+  const partial=placeCampaign(c.active!,...WITNESSES[index]![0]!);
+  expect(partial.status).toBe('running');
+  expect(c.place(...WITNESSES[index]![0]!)).toBe(true);
+  expect(c.active).toEqual(partial);
+  expect(loadCampaign().active).toBeNull();
+  c.abandon();
+  expect(c.active).toBeNull();
+  expect(c.completed).toEqual(prefix(index));
+  expect(c.start(order.id)).toBe(true);
+  expect(c.active).toEqual(initialAttempt(order));
+  c.place(...WITNESSES[index]![0]!);
+  expect(c.start(order.id)).toBe(true); // Re-enter without visiting another order.
+  expect(c.active).toEqual(initialAttempt(order));
+  for(const move of WITNESSES[index]!)expect(c.place(...move)).toBe(true);
+  expect(c.active?.status).toBe('succeeded');
+  expect(c.completed).toContain(order.id);
+  expect(loadCampaign().active).toBeNull();
+  c.abandon();
+  c=new CampaignController();
+  expect(c.completed).toContain(order.id);
+  expect(c.start(order.id)).toBe(true);
+  expect(c.active).toEqual(initialAttempt(order));
+ }
+});
+it('completed journal progress survives replay and abandonment while live progress is not durable',()=>{
+ const order=CAMPAIGN_CATALOG[0]!;
+ const c=new CampaignController();
+ expect(c.start(order.id)).toBe(true);
+ expect(c.place(...WITNESSES[0]![0]!)).toBe(true);
+ expect(loadCampaign().active).toBeNull();
+ c.abandon();
  expect(journalProgress(order.fragments,false,null)).toBeNull();
- expect(controller.start(order.id)).toBe(true);
- expect(controller.active).toEqual(initial);
- expect(controller.completed).toContain(order.id);
+ expect(c.start(order.id)).toBe(true);
+ for(const move of WITNESSES[0]!)c.place(...move);
+ expect(c.completed).toContain(order.id);
+ expect(journalProgress(order.fragments,true,null)).toEqual({total:4,removed:4,remaining:0});
+ c.start(order.id);
+ c.place(...WITNESSES[0]![0]!);
+ c.abandon();
  expect(new CampaignController().completed).toContain(order.id);
+ expect(journalProgress(order.fragments,true,null)).toEqual({total:4,removed:4,remaining:0});
+});
+it('legacy v2 active snapshot is ignored without migration alert or progress loss',()=>{
+ const order=CAMPAIGN_CATALOG[0]!, partial=placeCampaign(initialAttempt(order),...WITNESSES[0]![0]!);
+ localStorage.setItem(CAMPAIGN_KEY,JSON.stringify({app:'block-workshop',mode:'campaign',schemaVersion:2,catalogVersion:2,targetRulesVersion:2,completedOrderIds:[order.id],active:partial,notice:null}));
+ const c=new CampaignController();
+ expect(c.active).toBeNull();
+ expect(c.notice).toBeNull();
+ expect(c.completed).toContain(order.id);
+ expect(c.start(order.id)).toBe(true);
+ expect(c.active).toEqual(initialAttempt(order));
+ expect(JSON.parse(localStorage.getItem(CAMPAIGN_KEY)!).active).not.toBeTruthy();
 });
