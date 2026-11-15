@@ -24,3 +24,12 @@ export function orderProgress(fragments: readonly TargetFragment[], remaining: r
  const total = fragments.reduce((sum, f) => sum + f.cells.length, 0);
  return { total, removed: total - remaining.length, remaining: remaining.length };
 }
+
+/** A completed order stays completed in the journal even after an unsuccessful replay.
+ * Never-completed orders display the progress of their current attempt, if any. */
+export function journalProgress(
+ fragments: readonly TargetFragment[], completed: boolean, activeRemaining: readonly TargetCell[] | null,
+): FragmentProgress | null {
+ if (completed) return orderProgress(fragments, []);
+ return activeRemaining === null ? null : orderProgress(fragments, activeRemaining);
+}

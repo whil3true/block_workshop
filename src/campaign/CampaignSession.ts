@@ -48,7 +48,8 @@ export class CampaignController {
  get completed(): readonly string[] { return this.state.completedOrderIds; }
  start(id: string, replay = false): boolean {
   const order = findOrder(id); if (!order || !isOrderUnlocked(id, this.completed)) return false;
-  if (replay || this.active?.orderId !== id) this.state = { ...this.state, active: initialAttempt(order) };
+  // Resume only a running attempt. Terminal attempts restart when selected again.
+  if (replay || this.active?.orderId !== id || this.active?.status !== 'running') this.state = { ...this.state, active: initialAttempt(order) };
   this.persist(); return true;
  }
  place(slot: number, row: number, col: number): boolean {
