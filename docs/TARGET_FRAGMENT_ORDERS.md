@@ -35,13 +35,13 @@ All coordinates here are **one-based**: rows from the top, columns from the left
 
 ## Storage and recovery
 
-Campaign v2 uses only `block-workshop:campaign:v2`, envelope `schemaVersion:2`, `catalogVersion:2`, `targetRulesVersion:2`; each order has `contentVersion:2`. Active snapshots also require `targetRulesVersion:2`. Old stage/count snapshots are never interpreted as target progress.
+Campaign v2 retains `block-workshop:campaign:v2` with `schemaVersion:2`, `catalogVersion:2`, and `targetRulesVersion:2`. **Only completed order IDs and a pending migration/recovery notice are persisted.** All order attempts (board, tray, target mask, score, streak, RNG, status) are transient in memory; every entry to every order starts fresh. Old stage/count snapshots are never interpreted as target progress.
 
 If v2 does not exist and the old test campaign key exists, v2 starts empty with an explanatory notice. The notice persists until acknowledged in the journal. The old key is retained and never used for gameplay. Classic saves, records, language and audio keys are untouched. If storage is denied, gameplay remains available in memory.
 
-Validation checks board/tray shape, known families/pieces, nonempty RNG state, numeric bounds, consumed-tray cursor, unique target subset, occupied original target tiles, initial state, terminal status and available placements. A malformed active attempt is discarded while a valid prefix of completions is retained; incompatible envelopes reset only campaign state. A recovery notice explains the free restart. No `localStorage.clear()` is used by production code.
+Pure game rules and tests still validate attempt shapes/target masks. On startup any older v2 active snapshot is ignored and normalized to `active:null` without a spurious corruption alert. Recognized completions remain durable. Invalid campaign envelopes can trigger the existing recovery notice. No `localStorage.clear()` is used by production code.
 
-Only one campaign attempt is retained, as before. Selecting a different order replaces that campaign attempt. Completed orders remain replayable for free. Result navigation uses the existing shared transaction with advertising disabled; classic advertising is unchanged.
+Only the currently open campaign attempt exists in memory. Exiting to the journal/menu, changing orders, or reloading discards it. Selecting any order always creates an initial attempt. Completed orders remain unlocked and replayable for free. The result navigation uses the existing shared transaction with advertising disabled; classic persistence and advertising are unchanged.
 
 ## UI and raster rendering
 
@@ -52,7 +52,7 @@ Only one campaign attempt is retained, as before. Selecting a different order re
 
 ## Verification
 
-Run `npm run check` on Node 22, then `EXPECT_COZY_ART=1 npm run test:e2e` against the complete 31-file pack. Tests cover all main/recovery solutions, both axis orders, simultaneous clears, intersections, partial masks, replacement cells, snapshot corruption, migration, independent classic persistence, free victory/defeat retries, shared pause/ad lifecycle, live RU/EN, 320/360px layouts, landscape/desktop/resizing and native Chromium touch.
+Run `npm run check` on Node 22, then `EXPECT_COZY_ART=1 npm run test:e2e` against the complete 31-file pack. Tests cover all main/recovery solutions, both axis orders, simultaneous clears, intersections, partial masks, replacement cells, legacy snapshot compatibility, achievements-only persistence, independent classic persistence, free victory/defeat retries, shared pause/ad lifecycle, live RU/EN, 320/360px layouts, landscape/desktop/resizing and native Chromium touch.
 
 `tests/e2e/render.spec.ts` verifies visible raster panels on Canvas fallback and records 120 real animation-frame intervals to `raster-frame-times.json`. A one-second stall fails the check. Existing assertion and journey timeouts were not increased. Production screenshots come from actual game renders; none is a generated mockup.
 
@@ -66,10 +66,10 @@ The feature branch does not deploy GitHub Pages: hosting still deploys only afte
 
 Physical Android QA remains required:
 
-1. In RU and EN, inspect equal mode-card padding, Play/Continue and centered Back arrow at the actual browser scale.
+1. In RU and EN, inspect equal mode-card padding, Play (not Resume) for orders and centered Back arrow at the actual browser scale.
 2. Follow all three main solutions; verify the target seals and per-fragment removed/remaining counts. Repeat order 02 using vertical-first and simultaneous routes.
-3. In order 03 after the first clear, A must show 2/4 removed, B 3/3, C 0/3 and total 5 left. Reload and resume: all counts and the remaining tray must match.
-4. After consuming the first tray in order 03, place the new left single at (5,2), an already-cleared target coordinate. It must remain ordinary; A stays 2/4. Reload and inspect the A silhouette.
+3. In order 03 after the first clear, A must show 2/4 removed, B 3/3, C 0/3 and total 5 left. Exit to the journal and reopen, then reload and reopen: the order must restart at 0 moves with the original tray and all targets restored.
+4. After consuming the first tray in order 03, place the new left single at (5,2), an already-cleared target coordinate. It must remain ordinary; A stays 2/4. Observe the A silhouette during the same attempt, then exit and reopen: the initial target silhouette must be restored.
 5. Try the mistake/recovery paths; inspect real defeat and free retry. Report how quickly the goal is understood, accidental drops, legibility and felt difficulty. Do not infer balance from scripted solutions.
 6. Rotate portrait ↔ landscape; inspect the full paper backdrop, unchanged board proportions, no scroll/zoom and drag cancellation during rotation/backgrounding.
 7. Switch back to an existing Classic game: board, tray, record, language, audio sliders and existing ad scenarios must remain intact. Run live Yandex draft SDK/ad checks separately; desktop mocks are not device tests.

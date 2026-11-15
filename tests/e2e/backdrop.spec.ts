@@ -53,7 +53,13 @@ test('order journal removes its settings hit area and retains Back navigation',a
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,431,45);
  await page.screenshot({path:info.outputPath('journal-no-settings.png')});
  await click(page,240,278);
- expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).active.status,CAMPAIGN_KEY)).toBe('running');
+
+ // A short order is live in memory only; entry still opens an interactive board.
+ expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key) ?? 'null')?.active ?? null,CAMPAIGN_KEY)).toBeNull();
+ const before=await page.screenshot();
+ await drag(page,0,8,4);
+ expect((await page.screenshot()).equals(before),'Order board responds to placement').toBe(false);
+ expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key) ?? 'null')?.active ?? null,CAMPAIGN_KEY)).toBeNull();
  await click(page,431,45);await click(page,150,230);
  await expect(page.locator('html')).toHaveAttribute('lang','ru');await click(page,240,667);
  await click(page,49,45);await click(page,49,45);await click(page,240,580);await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(1);

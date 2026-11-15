@@ -1,3 +1,5 @@
+<!-- Historical document: describes the original campaign vertical slice prior to target-fragment orders and the later ephemeral-attempt policy. Current rules: docs/TARGET_FRAGMENT_ORDERS.md. -->
+
 # Paper Mosaic — historical campaign vertical slice
 
 > Superseded by [Target fragment orders — rules v2](TARGET_FRAGMENT_ORDERS.md). The sequential rules and v1 upload instructions below document the original slice only; they are not the current campaign.

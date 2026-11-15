@@ -41,23 +41,35 @@ export function placeCampaign(state: CampaignAttempt, slot: number, row: number,
 }
 export class CampaignController {
  private state: CampaignState;
- constructor(private onChange: () => void = () => {}, private canInteract: () => boolean = () => true) { this.state = loadCampaign(); if (this.state.notice) saveCampaign(this.state); }
+ constructor(private onChange: () => void = () => {}, private canInteract: () => boolean = () => true) {
+  this.state = loadCampaign();
+  // Normalize older saved attempts to achievements-only storage on startup.
+  saveCampaign(this.state);
+ }
  get notice(): CampaignState['notice'] { return this.state.notice; }
  acknowledgeNotice(): void { this.state = { ...this.state, notice: null }; this.persist(); }
  get active(): CampaignAttempt | null { return this.state.active; }
  get completed(): readonly string[] { return this.state.completedOrderIds; }
- start(id: string, replay = false): boolean {
+ start(id: string, _replay = false): boolean {
   const order = findOrder(id); if (!order || !isOrderUnlocked(id, this.completed)) return false;
-  // Resume only a running attempt. Terminal attempts restart when selected again.
-  if (replay || this.active?.orderId !== id || this.active?.status !== 'running') this.state = { ...this.state, active: initialAttempt(order) };
-  this.persist(); return true;
+  // All orders start fresh on every entry. Partial play is intentionally not persistent.
+  this.state = { ...this.state, active: initialAttempt(order) };
+  this.onChange(); return true;
+ }
+ /** Leaving an order discards its short-lived attempt, preserving earned completions. */
+ abandon(): void {
+  if (!this.state.active) return;
+  this.state = { ...this.state, active: null };
+  this.onChange();
  }
  place(slot: number, row: number, col: number): boolean {
   if (!this.canInteract() || !this.active) return false;
   const next = placeCampaign(this.active, slot, row, col); if (next === this.active) return false;
   const completedOrderIds = next.status === 'succeeded' ? [...new Set([...this.completed, next.orderId])] : [...this.completed];
   this.state = { ...this.state, active: next, completedOrderIds };
-  this.persist(); return true;
+  // Save only earned completions, not the live board or remaining targets.
+  if (next.status === 'succeeded') this.persist(); else this.onChange();
+  return true;
  }
  private persist(): void { saveCampaign(this.state); this.onChange(); }
 }

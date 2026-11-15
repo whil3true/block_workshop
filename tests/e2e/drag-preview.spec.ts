@@ -2,7 +2,6 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { click, frames, open, point, seed, snapshot } from './helpers';
 import { CAMPAIGN_KEY } from '../../src/campaign/CampaignStore';
-import type { CampaignAttempt } from '../../src/campaign/CampaignSession';
 
 async function region(page: Page, x: number, y: number, width: number, height: number) {
  const a=await point(page,x,y),b=await point(page,x+width,y+height);
@@ -11,9 +10,6 @@ async function region(page: Page, x: number, y: number, width: number, height: n
 
 async function saves(page: Page) {
  return page.evaluate(key=>({classic:localStorage.getItem('block-workshop:lastGame'),campaign:localStorage.getItem(key)}),CAMPAIGN_KEY);
-}
-async function attempt(page: Page) {
- return page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).active as CampaignAttempt,CAMPAIGN_KEY);
 }
 async function start(page: Page,mode: 'classic'|'campaign') {
  await seed(page,{locale:'en',board:Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>r===8&&c===0?'single':null))});
@@ -24,10 +20,13 @@ async function start(page: Page,mode: 'classic'|'campaign') {
 for(const mode of ['classic','campaign'] as const) {
  test(`${mode}: all three source figures hide, reject, restore, place and refill`,async({page},info)=>{
   await page.setViewportSize({width:393,height:852});await start(page,mode);
+  const savedOnEntry=await saves(page);
+  let firstEmpty: Buffer | null=null;
   for(const slot of [0,1,2]) {
    const source=await region(page,[30,180,330][slot]!,626,120,104),saved=await saves(page);
    await hold(page,slot);await move(page,42,530); // Occupied (8,0) in both modes.
    const hidden=await region(page,[30,180,330][slot]!,626,120,104);
+   if(slot===0)firstEmpty=hidden;
    expect(hidden.equals(source),'Only source figure disappears while held').toBe(false);
    expect(await saves(page)).toEqual(saved);
    if(slot===0)await page.screenshot({path:info.outputPath(`${mode}-invalid-no-hatching.png`)});
@@ -35,30 +34,41 @@ for(const mode of ['classic','campaign'] as const) {
    expect(await saves(page)).toEqual(saved);
    expect((await region(page,[30,180,330][slot]!,626,120,104)).equals(source),'Invalid drop restores source').toBe(true);
    await hold(page,slot);await move(page,42+slot*132,178);
+   const boardBefore=await region(page,20+slot*132,156,44,44);
    if(slot===0)await page.screenshot({path:info.outputPath(`${mode}-valid-source-hidden.png`)});
    await page.mouse.up();await frames(page);
    if(slot<2)expect((await region(page,[30,180,330][slot]!,626,120,104)).equals(hidden),'Successful drop leaves source slot empty').toBe(true);
+   const boardAfter=await region(page,20+slot*132,156,44,44);
+   expect(boardAfter.equals(boardBefore),'Successful drop places a visible piece on the board').toBe(false);
    if(mode==='classic')expect((await snapshot(page)).score).toBe(slot+1);
-   else expect((await attempt(page)).moves).toBe(slot+1);
+   else expect((await saves(page)).campaign).toBe(saved.campaign);
   }
-  const tray=mode==='classic'?(await snapshot(page)).trayIds:(await attempt(page)).trayIds;
-  expect(tray.every(Boolean),'Three consumed figures produce next set').toBe(true);
+  if(mode==='classic')expect((await snapshot(page)).trayIds.every(Boolean),'Three consumed figures produce next set').toBe(true);
+  else {
+   expect(firstEmpty).not.toBeNull();
+   expect((await region(page,30,626,120,104)).equals(firstEmpty!),'Campaign also refills the first source slot').toBe(false);
+   expect((await saves(page)).campaign,'Partial campaign moves never update persistent saves').toBe(savedOnEntry.campaign);
+  }
  });
 
- test(`${mode}: interruptions restore source without changing either save`,async({page})=>{
-  await page.setViewportSize({width:393,height:852});await start(page,mode);
-  const source=await region(page,30,626,120,104),header=await region(page,0,0,480,70),saved=await saves(page);
-  for(const reason of ['pointercancel','blur','pagehide','resize','modal','escape']) {
+
+ // A single six-interruption case exceeded Chromium software-renderer time budget,
+ // despite its assertions passing individually. Each interruption now has its own
+ // isolated 90-second budget and actionable failure trace.
+ for(const reason of ['pointercancel','blur','pagehide','resize','modal','escape'] as const) {
+  test(`${mode}: ${reason} restores held source without changing either save`,async({page})=>{
+   await page.setViewportSize({width:393,height:852});await start(page,mode);
+   const source=await region(page,30,626,120,104),saved=await saves(page);
    await hold(page,0);await move(page,240,310);
    expect((await region(page,30,626,120,104)).equals(source)).toBe(false);
    if(reason==='pointercancel')await page.locator('canvas').dispatchEvent('pointercancel',{pointerId:1});
    if(reason==='blur')await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
    if(reason==='pagehide')await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
    if(reason==='resize')await page.setViewportSize({width:852,height:393});
-   // A second mouse down exercises the actual modal hit zone while holding.
    if(reason==='modal') {
+    const header=await region(page,0,0,480,70);
     await click(page,431,45);
-    expect((await region(page,0,0,480,70)).equals(header),'Settings actually opened above the held drag').toBe(false);
+    expect((await region(page,0,0,480,70)).equals(header),'Settings actually opened above held drag').toBe(false);
    }
    if(reason==='escape')await page.keyboard.press('Escape');
    await frames(page);await move(page,42,178);await page.mouse.up();await frames(page);
@@ -66,15 +76,16 @@ for(const mode of ['classic','campaign'] as const) {
    if(reason==='pagehide')await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
    if(reason==='resize')await page.setViewportSize({width:393,height:852});
    if(reason==='modal')await click(page,240,667);
-   if(reason==='escape') {
+   if(reason==='escape'){
     await click(page,240,mode==='classic'?565:412);
     if(mode==='campaign')await click(page,240,278);
    }
    expect(await saves(page),`${reason} preserves saves after returning to play`).toEqual(saved);
    await frames(page);await frames(page);
    expect((await region(page,30,626,120,104)).equals(source),`${reason} restores source`).toBe(true);
-  }
- });
+  });
+ }
+
 }
 
 test('Chromium native Android touch: lift, both gutters, touchcancel and orientation',async({page,browserName},info)=>{
