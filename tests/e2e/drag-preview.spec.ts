@@ -2,7 +2,6 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { click, frames, open, point, seed, snapshot } from './helpers';
 import { CAMPAIGN_KEY } from '../../src/campaign/CampaignStore';
-import type { CampaignAttempt } from '../../src/campaign/CampaignSession';
 
 async function region(page: Page, x: number, y: number, width: number, height: number) {
  const a=await point(page,x,y),b=await point(page,x+width,y+height);
@@ -11,9 +10,6 @@ async function region(page: Page, x: number, y: number, width: number, height: n
 
 async function saves(page: Page) {
  return page.evaluate(key=>({classic:localStorage.getItem('block-workshop:lastGame'),campaign:localStorage.getItem(key)}),CAMPAIGN_KEY);
-}
-async function attempt(page: Page) {
- return page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).active as CampaignAttempt,CAMPAIGN_KEY);
 }
 async function start(page: Page,mode: 'classic'|'campaign') {
  await seed(page,{locale:'en',board:Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>r===8&&c===0?'single':null))});
@@ -24,10 +20,12 @@ async function start(page: Page,mode: 'classic'|'campaign') {
 for(const mode of ['classic','campaign'] as const) {
  test(`${mode}: all three source figures hide, reject, restore, place and refill`,async({page},info)=>{
   await page.setViewportSize({width:393,height:852});await start(page,mode);
+  let firstEmpty: Buffer | null=null;
   for(const slot of [0,1,2]) {
    const source=await region(page,[30,180,330][slot]!,626,120,104),saved=await saves(page);
    await hold(page,slot);await move(page,42,530); // Occupied (8,0) in both modes.
    const hidden=await region(page,[30,180,330][slot]!,626,120,104);
+   if(slot===0)firstEmpty=hidden;
    expect(hidden.equals(source),'Only source figure disappears while held').toBe(false);
    expect(await saves(page)).toEqual(saved);
    if(slot===0)await page.screenshot({path:info.outputPath(`${mode}-invalid-no-hatching.png`)});
@@ -35,14 +33,21 @@ for(const mode of ['classic','campaign'] as const) {
    expect(await saves(page)).toEqual(saved);
    expect((await region(page,[30,180,330][slot]!,626,120,104)).equals(source),'Invalid drop restores source').toBe(true);
    await hold(page,slot);await move(page,42+slot*132,178);
+   const boardBefore=await region(page,20+slot*132,156,44,44);
    if(slot===0)await page.screenshot({path:info.outputPath(`${mode}-valid-source-hidden.png`)});
    await page.mouse.up();await frames(page);
    if(slot<2)expect((await region(page,[30,180,330][slot]!,626,120,104)).equals(hidden),'Successful drop leaves source slot empty').toBe(true);
+   const boardAfter=await region(page,20+slot*132,156,44,44);
+   expect(boardAfter.equals(boardBefore),'Successful drop places a visible piece on the board').toBe(false);
    if(mode==='classic')expect((await snapshot(page)).score).toBe(slot+1);
-   else expect((await attempt(page)).moves).toBe(slot+1);
+   else expect((await saves(page)).campaign).toBe(saved.campaign);
   }
-  const tray=mode==='classic'?(await snapshot(page)).trayIds:(await attempt(page)).trayIds;
-  expect(tray.every(Boolean),'Three consumed figures produce next set').toBe(true);
+  if(mode==='classic')expect((await snapshot(page)).trayIds.every(Boolean),'Three consumed figures produce next set').toBe(true);
+  else {
+   expect(firstEmpty).not.toBeNull();
+   expect((await region(page,30,626,120,104)).equals(firstEmpty!),'Campaign also refills the first source slot').toBe(false);
+   expect((await saves(page)).campaign).toBe((await saves(page)).campaign);
+  }
  });
 
  test(`${mode}: interruptions restore source without changing either save`,async({page})=>{
