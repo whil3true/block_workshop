@@ -180,7 +180,7 @@ it('every entry of every order starts fresh; leaving discards transient state bu
   saveCampaign({active:null,completedOrderIds:prefix(index)});
   let c=new CampaignController();
   expect(c.start(order.id)).toBe(true);
-  const partial=placeCampaign(c.active!,...WITNESSES[index]![0]!);
+  const partial=simulate(c.active!,WITNESSES[index]![0]!);
   expect(partial.status).toBe('running');
   expect(step(c,WITNESSES[index]![0]!)).toBe(true);
   expect(c.active).toEqual(partial);
