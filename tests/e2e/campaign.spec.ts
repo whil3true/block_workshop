@@ -241,15 +241,25 @@ test('no warning before the first move; bottom Orders button confirms after a mo
  expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
 });
 
-test('Esc confirms unfinished campaign exit to main menu, with cancellation available',async({page})=>{
+test('Esc exit confirmation can be cancelled without restarting the unfinished order',async({page})=>{
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
  await drag(page,0,8,4);
- const before=await boardPixels(page);
- await page.keyboard.press('Escape');
- await page.keyboard.press('Escape'); // Close confirmation without leaving.
- expect((await boardPixels(page)).equals(before)).toBe(true);
- await page.keyboard.press('Escape');await click(page,240,518); // Confirm to menu.
+ await page.keyboard.press('Escape'); // Open the exit warning.
+ await page.keyboard.press('Escape'); // Dismiss warning and keep the active order.
+ await frames(page);
+ // Remaining solution moves must still complete the SAME attempt.
+ // A reset would restore the first piece and this two-move suffix could not finish.
+ await complete(page,WITNESSES[0]!.slice(1));
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
+
+test('Esc confirms unfinished campaign exit to main menu and re-entry starts fresh',async({page})=>{
+ await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
+ await drag(page,0,8,4);
+ await page.keyboard.press('Escape'); // Open exit warning.
+ await click(page,240,518); // Confirm exit to menu.
  await click(page,240,412);await click(page,240,278);
+ // A fresh attempt must accept the complete original solution.
  await complete(page,WITNESSES[0]);
  expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
 });
