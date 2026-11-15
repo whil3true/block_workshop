@@ -198,3 +198,63 @@ for(const locale of ['ru','en'])for(const index of [0,1,2])
   }
   expect((await campaign(page))?.completedOrderIds).toHaveLength(3);
  });
+
+for(const locale of ['ru','en'] as const) {
+ test(`campaign back warning lets player stay, then confirms discard (${locale})`,async({page},info)=>{
+  await seed(page,{locale});await open(page);await click(page,240,412);await click(page,240,278);
+  await drag(page,0,8,4); // A changed, unfinished order.
+  const before=await page.screenshot();
+  await click(page,49,45);
+  const warning=await page.screenshot({path:info.outputPath(`leave-warning-${locale}.png`)});
+  expect(warning.equals(before),'Back opens warning after a move').toBe(false);
+  expect((await campaign(page))?.active??null).toBeNull();
+  await click(page,240,450); // Keep playing.
+  const returned=await page.screenshot();
+  expect(returned.equals(before),'Cancel leaves current board intact').toBe(true);
+  await drag(page,1,8,7); // Still the same incomplete attempt, not reset.
+  await click(page,49,45);await click(page,240,518); // Confirm leave.
+  const journal=await page.screenshot({path:info.outputPath(`journal-after-confirm-${locale}.png`)});
+  await click(page,240,278); // Reenter starts at the beginning.
+  const fresh=await page.screenshot();
+  expect(fresh.equals(journal),'Confirmation navigates away from the game').toBe(false);
+  await complete(page,WITNESSES[0]);
+  expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+ });
+}
+
+test('no warning before the first move; bottom Orders button confirms after a move',async({page},info)=>{
+ await seed(page,{locale:'ru'});await open(page);await click(page,240,412);await click(page,240,278);
+ await click(page,49,45); // No progress yet, so leave directly.
+ await click(page,240,278);await drag(page,0,8,4);
+ const before=await page.screenshot();
+ await click(page,360,759); // The lower Orders button must warn too.
+ await page.screenshot({path:info.outputPath('orders-button-exit-warning.png')});
+ await click(page,240,450); // Keep playing.
+ expect((await page.screenshot()).equals(before)).toBe(true);
+ await click(page,360,759);await click(page,240,518); // Confirm exit.
+ await click(page,240,278);
+ await complete(page,WITNESSES[0]);
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
+
+test('Esc confirms unfinished campaign exit to main menu, with cancellation available',async({page},info)=>{
+ await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
+ await drag(page,0,8,4);
+ const before=await page.screenshot();
+ await page.keyboard.press('Escape');
+ await page.keyboard.press('Escape'); // Close confirmation without leaving.
+ expect((await page.screenshot()).equals(before)).toBe(true);
+ await page.keyboard.press('Escape');await click(page,240,518); // Confirm to menu.
+ await click(page,240,412);await click(page,240,278);
+ await complete(page,WITNESSES[0]);
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
+
+test('completed campaign result can return to menu without exit warning',async({page},info)=>{
+ await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
+ await complete(page,WITNESSES[0]);
+ await click(page,240,626); // Existing result action is not intercepted.
+ await page.screenshot({path:info.outputPath('completed-order-return.png')});
+ await click(page,240,412);
+ expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[0]!.id);
+});
