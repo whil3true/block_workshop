@@ -254,7 +254,7 @@ it('keeps all 18 layouts and constructive proofs, with authored deals only in tu
   const data=SOLUTIONS[i]!;
   const {seed,trays,solution,recovery,removedPerMove,designDifficulty,designNotes,...base}=data;
   const {deal,...runtime}=o;
-  expect(o.deal==='fixed'?runtime:base).toEqual(o.deal==='fixed'?{...base,seed,trays}:runtime);
+  expect(runtime).toEqual(o.deal==='fixed'?{...base,seed,trays}:base);
   expect(solution).toEqual(CONSTRUCTIVE_WITNESSES[i]);expect(recovery).toEqual(CONSTRUCTIVE_RECOVERY_PATHS[i]);
   expect(designDifficulty).toBeGreaterThan(0);expect(designNotes.length).toBeGreaterThan(0);
   // Replay historical proofs by explicitly supplying test-only deals; production ignores them.

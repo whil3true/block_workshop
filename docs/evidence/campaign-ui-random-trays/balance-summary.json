@@ -1,0 +1,140 @@
+{
+  "method": "Greedy offline QA player, seeds 1–25; deliberate crowding seed 17. Not a human win-rate estimate.",
+  "orders": [
+    {
+      "id": "ch01-order04",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 4,
+      "longestWin": 10,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch01-order05",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 4,
+      "longestWin": 7,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch01-order06",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 5,
+      "longestWin": 13,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch02-order07",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 4,
+      "longestWin": 10,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch02-order08",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 4,
+      "longestWin": 7,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch02-order09",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 2,
+      "longestWin": 7,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch02-order10",
+      "seeds": 25,
+      "wins": 24,
+      "losses": 1,
+      "shortestWin": 8,
+      "longestWin": 14,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch02-order11",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 8,
+      "longestWin": 22,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch02-order12",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 5,
+      "longestWin": 13,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch03-order13",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 2,
+      "longestWin": 7,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch03-order14",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 4,
+      "longestWin": 7,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch03-order15",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 6,
+      "longestWin": 16,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch03-order16",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 6,
+      "longestWin": 16,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch03-order17",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 6,
+      "longestWin": 13,
+      "deliberateCrowding": "failed"
+    },
+    {
+      "id": "ch03-order18",
+      "seeds": 25,
+      "wins": 25,
+      "losses": 0,
+      "shortestWin": 11,
+      "longestWin": 28,
+      "deliberateCrowding": "failed"
+    }
+  ]
+}
