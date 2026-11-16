@@ -39,6 +39,7 @@ export class WorkshopScene extends Phaser.Scene {
  private screen: 'menu' | 'journal' | 'play' = 'menu';
  private mode: 'classic' | 'campaign' = 'classic';
  private chapter = 1;
+ private journalPage = 0;
  private modal: Modal = null;
  private pendingExit: 'journal' | 'menu' | null = null;
  private ready = false;
@@ -196,35 +197,35 @@ export class WorkshopScene extends Phaser.Scene {
   const orders = CAMPAIGN_CATALOG.filter(o => chapter.orderIds.includes(o.id));
   this.text(240,112,`${locale.t('chapter')} ${chapter.number} · ${chapter.title[locale.locale]}`,'screenTitle',440);
   CHAPTERS.forEach((entry,i) => {
-   const x = [86,252,399][i]!;
-   if (entry.orderIds.length) {
-    this.root.add(this.add.container(0,0,[paperSurface(this,'chapter-tab',x,174,120,50,0x9cab86)]).setAlpha(entry.number === this.chapter ? 1 : .58));
-    this.text(x,174,`${entry.number} / 3`,'body',0,entry.number === this.chapter ? '#30452D' : '#7A6A60');
-    this.zone(`chapter-${entry.number}`,x,174,120,60,() => {this.chapter=entry.number;this.invalidate();});
-   }
+   const x = [86,240,394][i]!;
+   this.root.add(this.add.container(0,0,[paperSurface(this,'chapter-tab',x,174,120,50,0x9cab86)]).setAlpha(entry.number === this.chapter ? 1 : .58));
+   this.text(x,174,`${entry.number} / 3`,'body',0,entry.number === this.chapter ? '#30452D' : '#7A6A60');
+   this.zone(`chapter-${entry.number}`,x,174,120,50,() => {
+    if (this.chapter !== entry.number) { this.chapter=entry.number; this.journalPage=0; this.invalidate(); }
+   });
   });
-  const columns = orders.length > 3 ? 2 : 1;
-  orders.forEach((order,index) => {
-   const y = 278 + Math.floor(index/columns) * 135, x = columns === 1 ? 240 : index%2 === 0 ? 128 : 352;
-   const cardWidth = columns === 1 ? 416 : 208, textX = columns === 1 ? 281 : x, textWidth = columns === 1 ? 290 : 184;
+  orders.slice(this.journalPage*3,this.journalPage*3+3).forEach((order,index) => {
+   const y = 278 + index*135;
    const complete = campaign.completed.includes(order.id), unlocked = isOrderUnlocked(order.id,campaign.completed);
-   this.surface('journal-card',x,y,cardWidth,120,unlocked ? 0xfff8f1 : 0xefe4d6);
+   this.surface('journal-card',240,y,416,120,unlocked ? 0xfff8f1 : 0xefe4d6);
    const number = String(CAMPAIGN_CATALOG.indexOf(order)+1).padStart(2,'0');
-   if (columns === 1) this.text(82,y-12,number,'screenTitle');
-   else this.text(x-80,y+2,number,'smallMetadata',26,'#7A6A60');
-   this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',columns === 1 ? 82 : x-80,y+29,24,complete ? '✓' : unlocked ? '›' : '•');
-   const title = this.text(0,0,order.title[locale.locale],columns === 1 ? 'body' : 'levelTitle',textWidth);
-   const metadataX = columns === 1 ? 0 : 15, metadataWidth = columns === 1 ? textWidth : 150;
-   const state = this.text(metadataX,0,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',metadataWidth,complete ? '#5B704D' : '#7A6A60');
+   this.text(80,y-17,number,'hudPrimary',0,unlocked ? '#4E4038' : '#8C8170');
+   this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',80,y+22,24,complete ? '✓' : unlocked ? '›' : '•');
+   // Full-width copy uses one stable title/status stack for every order.
+   this.text(122,y-17,order.title[locale.locale],'body',0,unlocked ? '#4E4038' : '#7A6A60').setOrigin(0,0.5).setName(`order-title-${order.id}`);
    const stats = journalProgress(order.fragments,complete,null);
-   const progress = stats ? `${locale.t('removed')}: ${stats.removed}/${stats.total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
-   const detail = this.text(metadataX,0,progress,'caption',metadataWidth,'#98513F');
-   // Stack measured lines so a wrapped title cannot collide with state/progress.
-   let top = -(title.height + state.height + detail.height + 6)/2 - 3;
-   for (const line of [title,state,detail]) { line.y=top+line.height/2;top+=line.height+3; }
-   const copy = this.add.container(textX,y,[title,state,detail]); this.root.add(copy);
-   this.zone(`order-${index+1}`,x,y,cardWidth,120,() => this.startOrder(order.id),!unlocked);
+   const status = stats ? `${locale.t('removed')} ${stats.removed}/${stats.total}` : locale.t(unlocked ? 'available' : 'locked');
+   this.text(122,y+22,status,'caption',0,complete ? '#5B704D' : '#7A6A60').setOrigin(0,0.5).setName(`order-status-${order.id}`);
+   this.zone(`order-${this.journalPage*3+index+1}`,240,y,416,120,() => this.startOrder(order.id),!unlocked);
   });
+  const pages = Math.ceil(orders.length/3);
+  this.text(240,650,`${this.journalPage+1} / ${pages}`,'body');
+  for (const direction of [-1,1]) {
+   const x = 240+direction*86, disabled = this.journalPage+direction < 0 || this.journalPage+direction >= pages;
+   this.surface('button-secondary',x,650,56,48);
+   this.text(x,648,direction === -1 ? '‹' : '›','screenTitle',0,disabled ? '#C9BEAA' : '#4E4038');
+   this.zone(direction === -1 ? 'journal-prev' : 'journal-next',x,650,56,48,() => { this.journalPage+=direction; this.invalidate(); },disabled);
+  }
   this.text(240,704,`${orders.filter(o=>campaign.completed.includes(o.id)).length} / ${orders.length} · ${locale.t('completed')}`,'caption',430,'#5B704D');
   const next = CAMPAIGN_CATALOG.find(o => !campaign.completed.includes(o.id))?.id;
   this.button('journal-continue',next ? 'play' : 'classic',240,756,() => {
@@ -232,7 +233,7 @@ export class WorkshopScene extends Phaser.Scene {
   },360,false,true);
  }
  private startOrder(id: string, replay = false): void {
-  if (this.services.campaign.start(id,replay)) { this.chapter=findOrder(id)!.chapter; this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
+  if (this.services.campaign.start(id,replay)) { this.chapter=findOrder(id)!.chapter; this.journalPage=Math.floor(CAMPAIGN_CATALOG.filter(o=>o.chapter===this.chapter).findIndex(o=>o.id===id)/3); this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
  }
  private drawPlay(): void {
   const { locale, model, campaign, platform } = this.services;

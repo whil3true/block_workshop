@@ -1,12 +1,15 @@
 import { createEmptyBoard, type BoardState, type CellState } from '../engine';
 import { ADDITIONAL_ORDERS } from './AdditionalOrders';
 import { targetCell, type TargetFragment } from './OrderRules';
-export interface OrderConfig {
+interface OrderBase {
  readonly id: string; readonly chapter: number; readonly contentVersion: number;
  readonly title: { readonly ru: string; readonly en: string };
- readonly board: BoardState; readonly trays: readonly (readonly [string, string, string])[];
- readonly seed: number; readonly fragments: readonly TargetFragment[];
+ readonly board: BoardState; readonly fragments: readonly TargetFragment[];
 }
+export type OrderConfig = OrderBase & (
+ { readonly deal: 'fixed'; readonly trays: readonly (readonly [string, string, string])[]; readonly seed: number } |
+ { readonly deal: 'random' }
+);
 function board(fill: (cells: CellState[][]) => void): BoardState {
  const cells = createEmptyBoard().map(row => [...row]); fill(cells); return cells;
 }
@@ -15,18 +18,18 @@ const fragment = (id: string, coords: readonly (readonly [number, number])[]): T
 });
 const recovery = [['single', 'domino-h', 'single'], ['square-2', 'tetra-v', 'single'], ['domino-h', 'tromino-v', 'l2-ne']] as const;
 export const CAMPAIGN_CATALOG: readonly OrderConfig[] = [
- { id: 'ch01-order01', chapter: 1, contentVersion: 2, title: { ru: 'Первый фрагмент', en: 'The first fragment' }, seed: 2101,
+ { id: 'ch01-order01', chapter: 1, contentVersion: 2, deal: 'fixed', title: { ru: 'Первый фрагмент', en: 'The first fragment' }, seed: 2101,
   board: board(b => { for (let c = 0; c < 4; c++) b[8]![c] = 'line'; }),
   trays: [['tromino-h', 'domino-h', 'single'], ...recovery],
   fragments: [fragment('A', [[8,0],[8,1],[8,2],[8,3]])] },
- { id: 'ch01-order02', chapter: 1, contentVersion: 2, title: { ru: 'Два фрагмента', en: 'Two fragments' }, seed: 2102,
+ { id: 'ch01-order02', chapter: 1, contentVersion: 2, deal: 'fixed', title: { ru: 'Два фрагмента', en: 'Two fragments' }, seed: 2102,
   board: board(b => {
    for (const c of [0,1,2,3,4,8,9]) b[7]![c] = 'line';
    for (const r of [0,1,2,3,5,6,8,9]) b[r]![7] = r < 4 ? 'l2' : 'sq2';
   }),
   trays: [['tromino-h', 'single', 'single'], ...recovery],
   fragments: [fragment('A', [[7,0],[7,1],[7,2],[7,3]]), fragment('B', [[0,7],[1,7],[2,7],[3,7]])] },
- { id: 'ch01-order03', chapter: 1, contentVersion: 2, title: { ru: 'Разделённая мозаика', en: 'A divided mosaic' }, seed: 2103,
+ { id: 'ch01-order03', chapter: 1, contentVersion: 2, deal: 'fixed', title: { ru: 'Разделённая мозаика', en: 'A divided mosaic' }, seed: 2103,
   board: board(b => {
    for (const c of [0,1,2,6,7,8,9]) b[4]![c] = c >= 7 ? 'sq2' : 'line';
    for (const r of [0,1,2,3,5,8,9]) b[r]![6] = r < 3 ? 'l2' : 'sq2';
