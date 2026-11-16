@@ -1,3 +1,5 @@
+> Campaign content is now complete: [18-order design, solutions and QA](COMPLETE_CAMPAIGN.md). The three-order content/QA notes below describe the original release; the target rules and achievements-only persistence remain unchanged.
+
 # Target fragment orders — campaign rules v2
 
 Base: `dev` at `6dd87d31413b1ceed133f618423d17232260083e`. Feature: `feature/target-fragment-orders`, Draft PR into `dev`. No merge or Pages deployment.

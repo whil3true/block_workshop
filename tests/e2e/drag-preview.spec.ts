@@ -14,7 +14,7 @@ async function saves(page: Page) {
 async function start(page: Page,mode: 'classic'|'campaign') {
  await seed(page,{locale:'en',board:Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>r===8&&c===0?'single':null))});
  await open(page);await click(page,240,mode==='classic'?565:412);
- if(mode==='campaign')await click(page,240,278);
+ if(mode==='campaign')await click(page,128,278);
 }
 
 for(const mode of ['classic','campaign'] as const) {
@@ -78,7 +78,7 @@ for(const mode of ['classic','campaign'] as const) {
    if(reason==='modal')await click(page,240,667);
    if(reason==='escape'){
     await click(page,240,mode==='classic'?565:412);
-    if(mode==='campaign')await click(page,240,278);
+    if(mode==='campaign')await click(page,128,278);
    }
    expect(await saves(page),`${reason} preserves saves after returning to play`).toEqual(saved);
    await frames(page);await frames(page);

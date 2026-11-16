@@ -52,7 +52,7 @@ test('external pause over settings has one dim and restores the modal input owne
 test('order journal removes its settings hit area and retains Back navigation',async({page},info)=>{
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,431,45);
  await page.screenshot({path:info.outputPath('journal-no-settings.png')});
- await click(page,240,278);
+ await click(page,128,278);
 
  // A short order is live in memory only; entry still opens an interactive board.
  expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key) ?? 'null')?.active ?? null,CAMPAIGN_KEY)).toBeNull();

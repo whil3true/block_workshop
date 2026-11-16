@@ -43,7 +43,7 @@ test('startup SDK pause holds input and LoadingAPI.ready; gameplay obeys indepen
 });
 for(const mode of ['classic','campaign']) {
  test(`${mode}: SDK interruption restores a held source figure and preserves saves`,async({page})=>{
-  await sdk(page);await click(page,240,mode==='classic'?565:412);if(mode==='campaign')await click(page,240,278);
+  await sdk(page);await click(page,240,mode==='classic'?565:412);if(mode==='campaign')await click(page,128,278);
   const a=await point(page,30,626),b=await point(page,150,730);
   const source=()=>page.screenshot({clip:{x:a.x,y:a.y,width:b.x-a.x,height:b.y-a.y}});
   const before=await source(),saved=await page.evaluate(()=>({...localStorage}));

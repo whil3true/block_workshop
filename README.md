@@ -1,6 +1,6 @@
 # Мастерская блоков / Block Workshop
 
-**Технический MVP; Android/Yandex QA pending.** Рабочее название. Одна бесконечная партия 10×10, 37 исходных форм, три фигуры. Phaser 4.2.1 + TypeScript 5.9.2 + Vite. Обычный интерфейс полностью внутри Canvas.
+**Технический MVP; Android/Yandex QA pending.** Рабочее название. Классическая бесконечная партия 10×10 и кампания из 18 заказов в трёх главах. 37 исходных форм, три фигуры в наборе. Phaser 4.2.1 + TypeScript 5.9.2 + Vite. Обычный интерфейс полностью внутри Canvas.
 
 ## Запуск
 
@@ -50,7 +50,8 @@ Playwright проверяет production Canvas в Chromium, Firefox и WebKit. 
 - Игра: `viliceq/10block@93dfa7eaf785043d038a4e5f20ba358d90f6edd9`, MIT; полный оригинальный архив и все исходные тесты находятся в `reference/`.
 - Платформенные модули: `whil3true/pairs_and_paths@da4a7612c870ce75d678b939a491157ae3670883`, перенесены по указанию владельца. Донор не изменялся.
 - Полные уведомления: [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt). Перенос: [docs/PROVENANCE.md](docs/PROVENANCE.md).
-- Campaign/daily/cloud/leaderboard/shop/rotate отсутствуют. RNG после reload не воспроизводит будущую выдачу детерминированно.
+- Кампания: три главы × шесть заказов, удаление исходных целевых плиток, последовательное открытие и бесплатный повтор. Сохраняется только завершение заказа. Описание, сложность и решения: [docs/COMPLETE_CAMPAIGN.md](docs/COMPLETE_CAMPAIGN.md).
+- Daily/cloud/leaderboard/shop/rotate отсутствуют. Классический RNG после reload не воспроизводит будущую выдачу детерминированно.
 - Миграция разрабатывается в `feature/phaser-migration`, Draft PR в `dev`; merge выполняет владелец. Архитектура: [docs/PHASER_MIGRATION.md](docs/PHASER_MIGRATION.md).
 
 ## GitHub Pages (тестовая версия)

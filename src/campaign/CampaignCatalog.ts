@@ -1,4 +1,5 @@
 import { createEmptyBoard, type BoardState, type CellState } from '../engine';
+import { ADDITIONAL_ORDERS } from './AdditionalOrders';
 import { targetCell, type TargetFragment } from './OrderRules';
 export interface OrderConfig {
  readonly id: string; readonly chapter: number; readonly contentVersion: number;
@@ -33,6 +34,7 @@ export const CAMPAIGN_CATALOG: readonly OrderConfig[] = [
   }),
   trays: [['tromino-h', 'domino-v', 'single'], ['single', 'single', 'domino-h'], ...recovery],
   fragments: [fragment('A', [[4,0],[4,1],[5,0],[6,0]]), fragment('B', [[4,7],[4,8],[4,9]]), fragment('C', [[0,6],[1,6],[2,6]])] },
+ ...ADDITIONAL_ORDERS,
 ];
 /** Only released content is selectable; future chapters contain no fake order IDs. */
 export const CHAPTERS = [
