@@ -85,7 +85,7 @@ test('first three orders: exit and reload discard partial play but earned comple
  await page.screenshot({path:info.outputPath('first-three-completed.png')});
  await click(page,240,626); // Order 03 result -> chapter journal.
  await page.screenshot({path:info.outputPath('journal-completed.png')});
- await click(page,49,45);await click(page,240,580);
+ await click(page,240,756);await click(page,240,580);
  expect(await snapshot(page)).toEqual(classicBefore);
  await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(18);
 });
@@ -436,6 +436,8 @@ for(const locale of ['ru','en'] as const) {
  });
 }
 
+test.describe('Android journal navigation',()=>{
+ test.use({userAgent:'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36',hasTouch:true});
 for(const locale of ['ru','en'])for(const width of [320,360,393]) {
  test(`journal single navigation, Back and Esc preserve completed orders and Classic ${locale} ${width}px`,async({page},info)=>{
   const ids=CAMPAIGN_CATALOG.map(o=>o.id);
@@ -461,3 +463,5 @@ for(const locale of ['ru','en'])for(const width of [320,360,393]) {
   expect((await campaign(page))?.completedOrderIds).toEqual(ids);
  });
 }
+
+});
