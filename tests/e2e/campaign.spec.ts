@@ -3,7 +3,7 @@ import { click, drag, frames, open, point, seed, snapshot } from './helpers';
 import { CAMPAIGN_CATALOG } from '../../src/campaign/CampaignCatalog';
 import { initialAttempt, placeCampaign, type CampaignAttempt } from '../../src/campaign/CampaignSession';
 import { CAMPAIGN_KEY, LEGACY_CAMPAIGN_KEY } from '../../src/campaign/CampaignStore';
-import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS, RECOVERY_PATHS } from '../campaign-witnesses';
+import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS, RECOVERY_PATHS, DEFEAT_18 } from '../campaign-witnesses';
 import type { Page } from '@playwright/test';
 import type { CellState } from '../../src/engine';
 
@@ -70,9 +70,8 @@ test('first three orders: exit and reload discard partial play but earned comple
  await complete(page,WITNESSES[2]);
  expect((await campaign(page))?.completedOrderIds).toHaveLength(3);
  expect((await campaign(page))?.active??null).toBeNull();
- await page.screenshot({path:info.outputPath('collection-completed.png')});
- await click(page,240,626); // Last victory -> menu.
- await click(page,240,412);
+ await page.screenshot({path:info.outputPath('first-three-completed.png')});
+ await click(page,240,626); // Order 03 result -> chapter journal.
  await page.screenshot({path:info.outputPath('journal-completed.png')});
  await click(page,49,45);await click(page,240,580);
  expect(await snapshot(page)).toEqual(classicBefore);
@@ -334,3 +333,16 @@ for(const locale of ['ru','en'])for(const width of [320,360,393]) {
   expect((await campaign(page))?.completedOrderIds).toHaveLength(4);
  });
 }
+
+
+test('real crowded order 18 reaches defeat and its free retry can complete the collection',async({page},info)=>{
+ await seedAchievements(page,CAMPAIGN_CATALOG.slice(0,17).map(o=>o.id));
+ await seed(page,{locale:'en'});await open(page);await click(page,240,412);await selectOrder(page,17);
+ await complete(page,DEFEAT_18);
+ expect((await campaign(page))?.completedOrderIds).toHaveLength(17);
+ await page.screenshot({path:info.outputPath('order-18-real-defeat.png')});
+ await click(page,240,553); // Existing free result retry; no ad or confirmation.
+ await complete(page,WITNESSES[17]!);
+ expect((await campaign(page))?.completedOrderIds).toHaveLength(18);
+ await page.screenshot({path:info.outputPath('order-18-after-defeat-retry.png')});
+});

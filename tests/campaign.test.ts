@@ -1,12 +1,13 @@
+import SOLUTIONS from './campaign-solutions.json';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CAMPAIGN_CATALOG, CHAPTERS, isOrderUnlocked } from '../src/campaign/CampaignCatalog';
 import { CampaignController, initialAttempt, placeCampaign, type CampaignAttempt } from '../src/campaign/CampaignSession';
 import { CAMPAIGN_KEY, LEGACY_CAMPAIGN_KEY, loadCampaign, saveCampaign, validAttempt } from '../src/campaign/CampaignStore';
 import { clearTargets, fragmentProgress, initialTargets, journalProgress, orderProgress } from '../src/campaign/OrderRules';
-import { canPlace, resolveClears, type CellState } from '../src/engine';
+import { applyPlacement, canPlace, resolveClears, type CellState } from '../src/engine';
 import { findPieceById } from '../src/pieces';
 import { createModel } from '../src/model';
-import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS, RECOVERY_PATHS } from './campaign-witnesses';
+import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS, RECOVERY_PATHS, DEFEAT_18 } from './campaign-witnesses';
 const simulate = (state: CampaignAttempt, move: readonly number[]) => placeCampaign(state,move[0]!,move[1]!,move[2]!);
 const step = (controller: CampaignController, move: readonly number[]) => controller.place(move[0]!,move[1]!,move[2]!);
 beforeEach(()=>localStorage.clear());
@@ -15,7 +16,9 @@ function replay(state: CampaignAttempt, moves: readonly (readonly [number,number
  for (const [slot,row,col] of moves) {
   expect(state.status).toBe('running');
   expect(canPlace(state.board,findPieceById(state.trayIds[slot]!)!,row,col)).toBe(true);
-  const next=placeCampaign(state,slot,row,col);expect(next.moves).toBe(state.moves+1);state=next;
+  const clears=resolveClears(applyPlacement(state.board,findPieceById(state.trayIds[slot]!)!,row,col));
+  const expected=state.remainingTargets.filter(cell=>!clears.rowsCleared.includes(Math.floor(cell/10))&&!clears.colsCleared.includes(cell%10));
+  const next=placeCampaign(state,slot,row,col);expect(next.remainingTargets).toEqual(expected);expect(next.moves).toBe(state.moves+1);state=next;
   expect(validAttempt(state)).toBe(true);
  }
  return state;
@@ -272,4 +275,26 @@ it('unlocks exactly one next order at every prefix, including both chapter bound
  }
  expect(c.start(CAMPAIGN_CATALOG[17]!.id,true)).toBe(true);for(const m of WITNESSES[17]!)step(c,m);
  expect(c.completed).toEqual(prefix(18));expect(loadCampaign().completedOrderIds).toEqual(prefix(18));
+});
+
+it('keeps the reviewable machine-readable QA data identical to the playable catalogue and traces',()=>{
+ expect(SOLUTIONS).toHaveLength(18);
+ for(const [i,data] of SOLUTIONS.entries()){
+  const {solution,recovery,removedPerMove,designDifficulty,designNotes,...order}=data;
+  expect(order).toEqual(CAMPAIGN_CATALOG[i]);expect(solution).toEqual(WITNESSES[i]);expect(recovery).toEqual(RECOVERY_PATHS[i]);
+  expect(designDifficulty).toBeGreaterThan(0);expect(designNotes.length).toBeGreaterThan(0);
+  let s=initialAttempt(CAMPAIGN_CATALOG[i]!);const removed:number[]=[];
+  for(const m of WITNESSES[i]!){const next=simulate(s,m);removed.push(s.remainingTargets.length-next.remainingTargets.length);s=next;}
+  expect(removedPerMove).toEqual(removed);
+ }
+});
+it('can genuinely lose order 18, preserves only the prior completion prefix, and retries for free',()=>{
+ saveCampaign({completedOrderIds:prefix(17),active:null});const c=new CampaignController();
+ expect(c.start(CAMPAIGN_CATALOG[17]!.id)).toBe(true);
+ for(const m of DEFEAT_18)expect(step(c,m)).toBe(true);
+ expect(c.active?.status).toBe('failed');expect(c.active?.moves).toBe(11);expect(validAttempt(c.active)).toBe(true);
+ expect(c.completed).toEqual(prefix(17));expect(loadCampaign().active).toBeNull();
+ expect(c.start(CAMPAIGN_CATALOG[17]!.id,true)).toBe(true);
+ for(const m of WITNESSES[17]!)expect(step(c,m)).toBe(true);
+ expect(c.active?.status).toBe('succeeded');expect(c.completed).toEqual(prefix(18));
 });

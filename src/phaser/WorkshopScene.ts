@@ -109,7 +109,7 @@ export class WorkshopScene extends Phaser.Scene {
   return this.mode === 'campaign' ? this.services.campaign.active!.trayIds.map(id => id ? findPieceById(id) ?? null : null) : this.services.model.trayPieces;
  }
  private get terminal(): boolean { return this.mode === 'campaign' ? this.services.campaign.active?.status !== 'running' : this.services.model.gameOver; }
- private text(x: number, y: number, value: string, role: 'screenTitle' | 'body' | 'hudPrimary' | 'caption' = 'body', width = 0, color?: string): Phaser.GameObjects.Text {
+ private text(x: number, y: number, value: string, role: 'screenTitle' | 'body' | 'hudPrimary' | 'caption' | 'levelTitle' | 'smallMetadata' = 'body', width = 0, color?: string): Phaser.GameObjects.Text {
   const text = createUiText(this, this.services.density, x, y, value, role, color ? { align: 'center', color } : { align: 'center' }).setOrigin(0.5);
   if (width) text.setWordWrapWidth(width, true);
   this.root.add(text); return text;
@@ -208,17 +208,20 @@ export class WorkshopScene extends Phaser.Scene {
    const cardWidth = columns === 1 ? 416 : 208, textX = columns === 1 ? 281 : x, textWidth = columns === 1 ? 290 : 184;
    const complete = campaign.completed.includes(order.id), unlocked = isOrderUnlocked(order.id,campaign.completed);
    this.surface('journal-card',x,y,cardWidth,120,unlocked ? 0xfff8f1 : 0xefe4d6);
-   if (columns === 1) this.text(82,y-12,String(CAMPAIGN_CATALOG.indexOf(order)+1).padStart(2,'0'),'screenTitle');
-   this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',columns === 1 ? 82 : x-74,y+26,28,complete ? '✓' : unlocked ? '›' : '•');
    const number = String(CAMPAIGN_CATALOG.indexOf(order)+1).padStart(2,'0');
-   const title = this.text(0,-32,`${number} · ${order.title[locale.locale]}`,'body',textWidth);
-   const state = this.text(0,0,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',textWidth,complete ? '#5B704D' : '#7A6A60');
+   if (columns === 1) this.text(82,y-12,number,'screenTitle');
+   else this.text(x-80,y+2,number,'smallMetadata',26,'#7A6A60');
+   this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',columns === 1 ? 82 : x-80,y+29,24,complete ? '✓' : unlocked ? '›' : '•');
+   const title = this.text(0,0,order.title[locale.locale],columns === 1 ? 'body' : 'levelTitle',textWidth);
+   const metadataX = columns === 1 ? 0 : 15, metadataWidth = columns === 1 ? textWidth : 150;
+   const state = this.text(metadataX,0,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',metadataWidth,complete ? '#5B704D' : '#7A6A60');
    const stats = journalProgress(order.fragments,complete,null);
    const progress = stats ? `${locale.t('removed')}: ${stats.removed}/${stats.total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
-   const detail = this.text(0,30,progress,'caption',textWidth,'#98513F');
+   const detail = this.text(metadataX,0,progress,'caption',metadataWidth,'#98513F');
+   // Stack measured lines so a wrapped title cannot collide with state/progress.
+   let top = -(title.height + state.height + detail.height + 6)/2 - 3;
+   for (const line of [title,state,detail]) { line.y=top+line.height/2;top+=line.height+3; }
    const copy = this.add.container(textX,y,[title,state,detail]); this.root.add(copy);
-   // Center the measured copy as one group; exclude the raster's bottom shadow.
-   copy.y += y - 3 - copy.getBounds().centerY;
    this.zone(`order-${index+1}`,x,y,cardWidth,120,() => this.startOrder(order.id),!unlocked);
   });
   this.text(240,704,`${orders.filter(o=>campaign.completed.includes(o.id)).length} / ${orders.length} · ${locale.t('completed')}`,'caption',430,'#5B704D');
