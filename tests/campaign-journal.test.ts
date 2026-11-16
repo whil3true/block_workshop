@@ -31,13 +31,13 @@ it.each(['ru','en'] as const)('all 18 %s cards have one full-width column and no
  for(let chapter=1;chapter<=6;chapter++){
   j.state.chapter=chapter;j.draw();
   const cards=j.zones.filter(z=>z.key.startsWith('order-'));
-  expect(cards.map(z=>[z.x,z.y,z.w,z.h,z.disabled])).toEqual([[240,278,416,120,false],[240,413,416,120,false],[240,548,416,120,false]]);
+  expect(cards.map(z=>[z.x,z.y,z.w,z.h,z.disabled])).toEqual([[240,297,416,132,false],[240,449,416,132,false],[240,601,416,132,false]]);
   const orders=CAMPAIGN_CATALOG.slice((chapter-1)*3,(chapter-1)*3+3);
   for(const [i,o] of orders.entries()){
    const title=j.labels.find(l=>l.value===o.title[locale])!;
-   expect(title).toMatchObject({x:122,y:261+i*135,role:'body',width:0});
+   expect(title).toMatchObject({x:122,y:280+i*152,role:'body',width:0});
    const total=o.fragments.flatMap(f=>f.cells).length;
-   expect(j.labels).toContainEqual(expect.objectContaining({value:`${words[locale].removed} ${total}/${total}`,y:300+i*135}));
+   expect(j.labels).toContainEqual(expect.objectContaining({value:`${words[locale].removed} ${total}/${total}`,y:319+i*152}));
   }
   expect(j.labels.filter(l=>l.value===words[locale].completed)).toHaveLength(0);
  }
