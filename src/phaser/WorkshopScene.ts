@@ -271,7 +271,10 @@ export class WorkshopScene extends Phaser.Scene {
    const stats = journalProgress(order.fragments,complete,null);
    const status = stats ? `${locale.t('removed')} ${stats.removed}/${stats.total}` : locale.t(unlocked ? 'available' : 'locked');
    this.text(122,y+22,status,'caption',0,complete ? '#5B704D' : '#7A6A60').setOrigin(0,0.5).setName(`order-status-${order.id}`);
-   this.zone(`order-${index+1}`,240,y,416,cardHeight,() => this.startOrder(order.id),!unlocked);
+   this.zone(`order-${index+1}`,240,y,416,cardHeight,() => {
+    if (complete) void this.services.flow.transition(() => this.startOrder(order.id,true));
+    else this.startOrder(order.id);
+   },!unlocked);
   });
   this.text(240,704,`${orders.filter(o=>campaign.completed.includes(o.id)).length} / ${orders.length} · ${locale.t('completed')}`,'caption',430,'#5B704D');
   this.button('journal-back','back',240,756,() => this.navigate('menu'),360,false,true);

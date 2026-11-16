@@ -131,3 +131,17 @@ test('native Android-style held touch cannot cross startup ad into a menu action
  await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settled(page);
  expect((await snapshot(page)).score).toBe(1);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(0);
 });
+
+test('completed journal card is an explicit replay transaction; first-time mode/journal selection has no ad',async({page})=>{
+ await page.addInitScript(({key,id})=>localStorage.setItem(key,JSON.stringify({app:'block-workshop',mode:'campaign',schemaVersion:2,catalogVersion:2,targetRulesVersion:2,completedOrderIds:[id],active:null,notice:null})),
+  {key:CAMPAIGN_KEY,id:CAMPAIGN_CATALOG[0]!.id});
+ await sdk(page);await click(page,240,412);await advance(page,0,100000);
+ expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(0);
+ await click(page,240,297);await expect.poll(()=>page.evaluate(()=>window.qaSdk.requests)).toBe(1);
+ expect(await page.evaluate(()=>window.qaSdk.starts)).toBe(0);
+ await click(page,240,297);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(1);
+ await close(page,false);expect(await page.evaluate(()=>window.qaSdk.starts)).toBe(1);
+ for(const [slot,row,col] of WITNESSES[0]!)await drag(page,slot,row,col);
+ await click(page,240,480);for(const [slot,row,col] of WITNESSES[1]!)await drag(page,slot,row,col);
+ expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)!).completedOrderIds.length,CAMPAIGN_KEY)).toBe(2);
+});

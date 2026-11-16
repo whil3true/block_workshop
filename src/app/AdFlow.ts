@@ -18,7 +18,10 @@ export class AdFlow<T extends RewardOffer> {
  async transition(destination: () => void, showAd = true): Promise<void> { await this.transact(destination, showAd); }
  async intermission(): Promise<boolean> { return this.transact(() => {}, true); }
  private async transact(destination: () => void, showAd: boolean): Promise<boolean> {
-  if (this.disposed || this.busy || this.deps.gate.paused) return false;
+  // 'startup' also marks non-gameplay menu/journal screens. Explicit journal
+  // replay may transition from there; every actual input/pause owner still blocks it.
+  const blocked = (['sdk','browser','focus','ad','transition','input','manual'] as const).some(reason => this.deps.gate.has(reason));
+  if (this.disposed || this.busy || blocked) return false;
   this.pending = true;
   this.deps.gate.set('transition', true);
   let shown = false;

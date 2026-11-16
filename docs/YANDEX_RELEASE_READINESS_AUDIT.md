@@ -20,6 +20,7 @@ All requests use the same InterstitialController and AdFlow instances, construct
 | Startup | Platform automatic advertisement only; no manual fullscreen request |
 | Menu: modes, settings; journal entry, chapter switches, journal → menu | No request |
 | Order result → next (including chapter boundaries) | Interstitial, then captured next order |
+| Completed order card → replay | Interstitial, then captured completed order; opening journal/changing chapter still requests nothing |
 | Order result → replay, including failed / final order | Interstitial, then fresh current order |
 | Confirmed in-order restart | Interstitial, then reset current attempt |
 | Order field → journal / menu | Existing warning preserved after moves; Stay requests nothing; confirmed exit requests interstitial, then abandons attempt |
@@ -29,8 +30,10 @@ All requests use the same InterstitialController and AdFlow instances, construct
 | Classic successful placement after 90 active seconds | Interstitial eligibility through same controller; no countdown |
 | Classic refresh, including recoverable defeat | Voluntary confirmed rewarded; once per Classic session |
 
-Opening a confirmation or declining it never requests an advertisement. No ad on selecting a
-previously completed order from the journal: journal selection is mode/level entry without an ad.
+Opening a confirmation or declining it never requests an advertisement. First-time order selection
+has no ad; selecting a completed order card is an explicit replay and uses the same transaction.
+The non-gameplay 'startup' pause marker used on journal/menu does not block this explicit UI
+transition; all actual SDK/browser/manual/input/ad owners continue to block it.
 
 ## Single controller and transaction ownership
 
@@ -208,6 +211,7 @@ These are viewport emulations, not proof of physical Android operation.
 10. Canvas-only covering could miss a frame while browser rendering was suspended; added a technical navigation shield.
 11. A blur-only pause overlay covered restored figures; preserve the original appearance with focus as an independent pause owner.
 12. Fresh input could precede rebuilding enabled hit areas after release; synchronously refresh at the end of the external release transaction.
+13. Completed-order journal cards also represent replay; route them through the same controller without adding ads to first-time selection or chapter navigation.
 
 ## Manual checklist in a real Yandex draft
 

@@ -151,3 +151,11 @@ it('transaction refresh follows gate release and destination construction, befor
  expect(refresh).not.toHaveBeenCalled();expect(gate.has('transition')).toBe(true);
  finish();await p;expect(refresh).toHaveBeenCalledOnce();
 });
+
+it('explicit journal replay may leave a non-gameplay screen, while real pause reasons still block it',async()=>{
+ const gate=new PauseGate();gate.set('startup',true);const destination=vi.fn(),request=vi.fn(async()=>false);
+ const flow=new AdFlow({gate,platform:new WebPlatform(),interstitial:{tryShow:request},cover:()=>{},afterFrame:async()=>{},restart:()=>{},applyReward:()=>true});
+ gate.set('sdk',true);await flow.transition(destination);expect(request).not.toHaveBeenCalled();
+ gate.set('sdk',false);await flow.transition(destination);expect(request).toHaveBeenCalledOnce();expect(destination).toHaveBeenCalledOnce();
+ expect(gate.has('startup')).toBe(true);
+});
