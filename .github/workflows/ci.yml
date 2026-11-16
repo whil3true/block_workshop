@@ -1,16 +1,12 @@
 name: Quality gates and Pages preview
 on: [push, pull_request, workflow_dispatch]
 
+permissions:
+  contents: read
+
 jobs:
-  verify:
-    # Keep the runner compatible with the locked Playwright release.
+  build:
     runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium, firefox, webkit]
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,27 +15,70 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run check
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
-      - run: npm run test:e2e -- --project=${{ matrix.browser }} --max-failures=3
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: build-and-results-${{ matrix.browser }}
-          path: |
-            dist
-            test-results
+          name: production-dist
+          path: dist
+          if-no-files-found: error
       - name: Configure GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && matrix.browser == 'chromium'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         uses: actions/configure-pages@v5
       - name: Upload Pages build
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && matrix.browser == 'chromium'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
+  verify:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            shard: 1/4
+            artifact: chromium-1
+          - browser: chromium
+            shard: 2/4
+            artifact: chromium-2
+          - browser: chromium
+            shard: 3/4
+            artifact: chromium-3
+          - browser: chromium
+            shard: 4/4
+            artifact: chromium-4
+          - browser: firefox
+            shard: 1/1
+            artifact: firefox
+          - browser: webkit
+            shard: 1/1
+            artifact: webkit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:e2e -- --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-${{ matrix.artifact }}
+          path: |
+            test-results
+            blob-report
+          if-no-files-found: error
+
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    needs: verify
+    needs: [build, verify]
     runs-on: ubuntu-latest
     permissions:
       pages: write

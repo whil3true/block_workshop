@@ -135,7 +135,7 @@ it('unlocks only released orders; a completed replay preserves completion',()=>{
  const controller=new CampaignController();expect(controller.start(CAMPAIGN_CATALOG[2]!.id)).toBe(false);controller.start(CAMPAIGN_CATALOG[0]!.id);
  for(const move of WITNESSES[0])controller.place(move[0]!,move[1]!,move[2]!);
  expect(isOrderUnlocked(CAMPAIGN_CATALOG[1]!.id,controller.completed)).toBe(true);controller.start(CAMPAIGN_CATALOG[0]!.id,true);expect(controller.completed).toHaveLength(1);
- expect(CHAPTERS).toHaveLength(3);for(const chapter of CHAPTERS)expect(chapter.orderIds).toHaveLength(6);
+ expect(CHAPTERS).toHaveLength(6);for(const chapter of CHAPTERS)expect(chapter.orderIds).toHaveLength(3);
 });
 it('keeps deterministic fallback RNG and tray cursor within a single attempt',()=>{
  let state=initialAttempt(CAMPAIGN_CATALOG[0]!), fallbackReached=false;
@@ -284,7 +284,7 @@ it('unlocks exactly one next order at every prefix, including both chapter bound
  for(const [index,o] of CAMPAIGN_CATALOG.entries()){
   expect(c.start(o.id)).toBe(true);for(const m of WITNESSES[index]!)expect(step(c,m)).toBe(true);
   expect(c.completed).toEqual(prefix(index+1));
-  expect(CHAPTERS[o.chapter-1]!.orderIds.filter(id=>c.completed.includes(id))).toHaveLength(index%6+1);
+  expect(CHAPTERS[Math.floor(index/3)]!.orderIds.filter(id=>c.completed.includes(id))).toHaveLength(index%3+1);
  }
  expect(c.start(CAMPAIGN_CATALOG[17]!.id,true)).toBe(true);for(const m of WITNESSES[17]!)step(c,m);
  expect(c.completed).toEqual(prefix(18));expect(loadCampaign().completedOrderIds).toEqual(prefix(18));

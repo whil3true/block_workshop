@@ -13,16 +13,19 @@ export async function seed(page: Page, options: { board?: (string | null)[][]; t
 export async function snapshot(page: Page) {
  return page.evaluate(() => JSON.parse(localStorage.getItem('block-workshop:lastGame')!).state as {board: (string|null)[][];trayIds: (string|null)[]; score:number;streak:number;rewardUsed:boolean});
 }
+/** Read one current geometry snapshot for all points in an input gesture. No cross-resize cache. */
+async function points(page: Page, coordinates: readonly {x:number;y:number}[]) {
+ return page.locator('canvas').evaluate((canvas,coordinates) => {
+  const box=canvas.getBoundingClientRect(),style=getComputedStyle(document.body);
+  const edge=(name:string):number=>parseFloat(style.getPropertyValue(`--safe-${name}`))||0;
+  const left=edge('left'),right=edge('right'),top=edge('top'),bottom=edge('bottom');
+  const scale=Math.min((box.width-left-right)/480,(box.height-top-bottom)/800);
+  return coordinates.map(({x,y})=>({x:box.x+(box.width+left-right)/2+(x-240)*scale,
+   y:box.y+(box.height+top-bottom)/2+(y-400)*scale}));
+ },coordinates);
+}
 export async function point(page: Page, x: number, y: number) {
- const box = await page.locator('canvas').boundingBox(); if (!box) throw Error('Canvas is missing');
- const insets = await page.evaluate(() => {
-  const style = getComputedStyle(document.body);
-  const edge = (name: string): number => parseFloat(style.getPropertyValue(`--safe-${name}`)) || 0;
-  return {left:edge('left'),right:edge('right'),top:edge('top'),bottom:edge('bottom')};
- });
- const scale = Math.min((box.width-insets.left-insets.right)/480,(box.height-insets.top-insets.bottom)/800);
- return { x: box.x + (box.width+insets.left-insets.right)/2 + (x-240)*scale,
-  y: box.y + (box.height+insets.top-insets.bottom)/2 + (y-400)*scale };
+ return (await points(page,[{x,y}]))[0]!;
 }
 export async function click(page: Page, x: number, y: number) {
  const p = await point(page,x,y); await page.mouse.click(p.x,p.y); await frames(page);
@@ -37,8 +40,7 @@ export async function open(page: Page, url = '/', waitForReady = true) {
  await frames(page); await frames(page);
 }
 export async function drag(page: Page, slot: number, row: number, col: number) {
- const from = await point(page, [90,240,390][slot]!,670);
- const to = await point(page,20+(col+0.5)*44,156+(row+0.5)*44);
+ const [from,to] = await points(page,[{x:[90,240,390][slot]!,y:670},{x:20+(col+0.5)*44,y:156+(row+0.5)*44}]) as [{x:number;y:number},{x:number;y:number}];
  await page.mouse.move(from.x,from.y); await page.mouse.down();
  // Keep a real multi-event drag, but avoid eight costly software-GL frames
  // per placement on headless CI. Native touch events are tested separately.

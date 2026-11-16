@@ -31,7 +31,7 @@ test('raster surfaces render in Canvas fallback and frame times stay bounded wit
  expect(timings.max).toBeLessThan(1000);await drag(page,0,8,4);
  await click(page,49,45); // Opens the new unfinished-order exit confirmation.
  await click(page,240,518); // Confirm: discard and open Order journal.
- await click(page,49,45); // Journal -> main menu.
+ await click(page,240,756); // Journal -> main menu.
  await click(page,240,580); // Classic.
  await drag(page,0,0,0);
  expect((await snapshot(page)).score).toBe(1);

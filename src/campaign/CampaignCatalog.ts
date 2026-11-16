@@ -39,12 +39,16 @@ export const CAMPAIGN_CATALOG: readonly OrderConfig[] = [
   fragments: [fragment('A', [[4,0],[4,1],[5,0],[6,0]]), fragment('B', [[4,7],[4,8],[4,9]]), fragment('C', [[0,6],[1,6],[2,6]])] },
  ...ADDITIONAL_ORDERS,
 ];
-/** Only released content is selectable; future chapters contain no fake order IDs. */
+/** Display chapters are independent of historical order IDs/content chapters. */
 export const CHAPTERS = [
- { number: 1, title: { ru: 'Первые фрагменты', en: 'First fragments' }, orderIds: CAMPAIGN_CATALOG.filter(o => o.chapter === 1).map(o => o.id) },
- { number: 2, title: { ru: 'Мозаика', en: 'Mosaics' }, orderIds: CAMPAIGN_CATALOG.filter(o => o.chapter === 2).map(o => o.id) },
- { number: 3, title: { ru: 'Узоры', en: 'Patterns' }, orderIds: CAMPAIGN_CATALOG.filter(o => o.chapter === 3).map(o => o.id) },
-] as const;
+ { ru: 'Первые фрагменты · I', en: 'First fragments · I' },
+ { ru: 'Первые фрагменты · II', en: 'First fragments · II' },
+ { ru: 'Мозаика · I', en: 'Mosaics · I' },
+ { ru: 'Мозаика · II', en: 'Mosaics · II' },
+ { ru: 'Узоры · I', en: 'Patterns · I' },
+ { ru: 'Узоры · II', en: 'Patterns · II' },
+].map((title,index) => ({ number: index+1, title, orderIds: CAMPAIGN_CATALOG.slice(index*3,index*3+3).map(o => o.id) }));
+export const displayChapterForOrder = (id: string): number => CHAPTERS.find(chapter => chapter.orderIds.includes(id))?.number ?? 1;
 export const findOrder = (id: string): OrderConfig | undefined => CAMPAIGN_CATALOG.find(o => o.id === id);
 export const isOrderUnlocked = (id: string, completed: readonly string[]): boolean => {
  const index = CAMPAIGN_CATALOG.findIndex(o => o.id === id);

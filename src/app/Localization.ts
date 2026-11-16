@@ -3,7 +3,7 @@ export const DEFAULT_LOCALE: SupportedLocale = "ru";
 export const words = {
  en: {
   shortRules: 'Fill rows or columns to clear them. Place all three pieces to receive a new tray.',
-  orders: 'Orders', classic: 'Classic', studio: 'Paper mosaic studio', chapter: 'Chapter', firstLines: 'First lines', order: 'Order',
+  back: 'Back', orders: 'Orders', classic: 'Classic', studio: 'Paper mosaic studio', chapter: 'Chapter', firstLines: 'First lines', order: 'Order',
   completed: 'Completed', available: 'Open', locked: 'Locked', future: 'More orders are in the making', soon: 'Coming later',
   retry: 'Try again', toOrders: 'Order journal', nextOrder: 'Next order', orderDone: 'Order completed', sliceDone: 'Workshop collection complete!',
   targetsLeft: 'Targets left', fragments: 'fragments', removed: 'Removed', left: 'Left', campaignUpdated: 'Orders updated', campaignReset: 'Orders now use target fragments. The old test campaign has been reset. Your Classic game, best score and settings are saved.', campaignRecovered: 'The saved order could not be restored. Start it again for free. Your Classic game and settings are saved.',
@@ -21,7 +21,7 @@ export const words = {
  },
  ru: {
   shortRules: 'Заполняй строки и столбцы. Размести все три фигуры — появится новый набор.',
-  orders: 'Заказы', classic: 'Классика', studio: 'Студия бумажной мозаики', chapter: 'Глава', firstLines: 'Первые линии', order: 'Заказ',
+  back: 'Назад', orders: 'Заказы', classic: 'Классика', studio: 'Студия бумажной мозаики', chapter: 'Глава', firstLines: 'Первые линии', order: 'Заказ',
   completed: 'Готово', available: 'Открыт', locked: 'Закрыт', future: 'Новые заказы ещё в работе', soon: 'Скоро',
   retry: 'Повторить', toOrders: 'К заказам', nextOrder: 'Следующий заказ', orderDone: 'Заказ выполнен', sliceDone: 'Коллекция мастерской готова!',
   targetsLeft: 'Целей осталось', fragments: 'фрагм.', removed: 'Удалено', left: 'Осталось', campaignUpdated: 'Заказы обновлены', campaignReset: 'Теперь цель — удалить отмеченные фрагменты. Прогресс старой тестовой кампании сброшен. Классика, рекорд и настройки сохранены.', campaignRecovered: 'Не удалось восстановить сохранённый заказ. Начните его заново бесплатно. Классика и настройки сохранены.',
