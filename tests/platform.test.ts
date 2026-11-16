@@ -121,3 +121,22 @@ it('a campaign destination uses the shared transaction without restarting classi
  await flow.transition(destination,false);
  expect(destination).toHaveBeenCalledTimes(1);expect(restart).not.toHaveBeenCalled();expect(ad).not.toHaveBeenCalled();expect(gate.paused).toBe(false);
 });
+
+describe('release regression: callback idempotency and reward completion',()=>{
+ it('repeated onOpen cannot repaint or extend an interstitial transaction',async()=>{
+  const f=fixture(),opened=vi.fn();const p=f.platform.showInterstitial(opened);
+  f.full().onOpen?.();f.full().onOpen?.();expect(opened).toHaveBeenCalledOnce();
+  f.full().onClose?.(true);expect(await p).toBe(true);
+ });
+ it.each(['error','timeout'] as const)('reward followed by %s does not commit a new tray',async kind=>{
+  vi.useFakeTimers();const f=fixture();const p=f.platform.showRewarded();f.reward().onRewarded?.();
+  if(kind==='error')f.reward().onError?.({});else await vi.advanceTimersByTimeAsync(120000);
+  expect(await p).toBe(false);f.reward().onClose?.();
+ });
+ it('rewarded opening is idempotent and shares fullscreen cooldown at completion',async()=>{
+  const f=fixture(),gate=new PauseGate();let now=0;const ads=new InterstitialController(f.platform,()=>now);
+  const flow=new AdFlow({gate,platform:f.platform,interstitial:ads,restart:()=>{},applyReward:()=>true,cover:()=>{},afterFrame:async()=>{}});
+  now=90000;const p=flow.reward({session:1,revision:0});f.reward().onOpen?.();f.reward().onOpen?.();now=180000;f.reward().onClose?.();
+  await p;expect(ads.shownRevision).toBe(1);expect(ads.eligible).toBe(false);now+=89999;expect(ads.eligible).toBe(false);now++;expect(ads.eligible).toBe(true);
+ });
+});
