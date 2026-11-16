@@ -36,7 +36,10 @@ export function mountApplication(platform: PlatformService, inputGuard = new Sdk
  const detachSdkPause = platform.onPause(() => gate.set('sdk', true));
  const detachSdkResume = platform.onResume(() => gate.set('sdk', false));
  const detachBrowser = attachBrowserGameplayLifecycle({ onBackground: () => gate.set('browser', true), onForeground: () => gate.set('browser', false) });
- const detachInput = inputGuard.subscribe(() => gate.set('input', inputGuard.isLocked));
+ const detachInput = inputGuard.subscribe(() => {
+  gate.set('input', inputGuard.isLocked);
+  if (!inputGuard.isLocked) scene?.refreshAfterExternalRelease();
+ });
  const blur = (): void => gate.set('focus', true);
  const focus = (): void => gate.set('focus', false);
  window.addEventListener('blur', blur); window.addEventListener('focus', focus);
@@ -54,6 +57,7 @@ export function mountApplication(platform: PlatformService, inputGuard = new Sdk
  const flow = new AdFlow<TrayOffer>({ gate, platform, interstitial,
   cover: visible => { if (visible) showNavigationCover(); else hideNavigationCover(); scene?.setCover(visible); },
   afterFrame: async () => { armNavigationCoverFallback(); await afterFrame(); },
+  refreshAfterTransition: () => scene?.refreshAfterExternalRelease(),
   restart: () => model.commitRestart(), applyReward: offer => model.commitReward(offer) });
  const density = selectStartupRenderScale(computeRenderScale(window.devicePixelRatio || 1, window.innerWidth, window.innerHeight), isDesktopBrowserUserAgent(navigator.userAgent, navigator.maxTouchPoints));
  scene = new WorkshopScene({ model, campaign, gate, locale, manager, audio, platform, flow, interstitial, density });

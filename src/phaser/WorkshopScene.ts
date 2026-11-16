@@ -94,6 +94,11 @@ export class WorkshopScene extends Phaser.Scene {
   this.draw();
  }
  invalidate(): void { this.dirty = true; }
+ /** Release callbacks run after render frames, outside Phaser's input dispatch.
+  * Rebuild hit areas synchronously so a fresh press cannot hit stale disabled UI. */
+ refreshAfterExternalRelease(): void {
+  if (!this.disposed && this.root && this.scene.isActive()) this.draw();
+ }
  setReady(): void {
   if (this.ready || this.disposed) return;
   this.screen = 'menu'; this.ready = true;

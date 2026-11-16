@@ -6,10 +6,10 @@ Cozy Gallery read-only reference: `dev` @ da4a7612c870ce75d678b939a491157ae36708
 
 ## Verdict
 
-**NO-GO until the automated checks below have completed.**
-This document will be updated with the actual CI results. No real Yandex advertisement,
-physical Android run, upload or moderation is claimed. The target after green CI is
-**GO for upload and QA in a Yandex draft**, not approval to publish.
+**CONDITIONAL GO.** Implementation is prepared for Yandex draft QA; publication requires the
+real-advertisement and physical Android checks listed below. The current PR's mandatory CI checks
+must be green before taking its production build. No real advertisement, physical Android run,
+upload or moderation is claimed. Automated success is not moderation approval.
 
 ## Advertising points
 
@@ -142,14 +142,35 @@ The existing dev-only Pages deploy job and optimized Chromium sharding are prese
 
 ## Validation
 
-Initial CI run [43973577124](https://github.com/whil3true/block_workshop/actions/runs/43973577124):
-Node 22 npm run check PASS, 630 unit tests PASS, production build/dist checks PASS.
-Firefox: all new monetization/startup cases passed; two unchanged blur appearance regressions failed
-and are corrected in the follow-up. Chromium shard 2 passed. Final rerun required for the follow-up.
+Verified implementation run:
+[43974954120](https://github.com/whil3true/block_workshop/actions/runs/43974954120),
+runtime commit `f25c73f0235a1f37574edac459496f16cde068e0`.
 
-Required command is npm run check under Node 22;
-existing CI then runs production E2E in Chromium (4 shards), Firefox and WebKit.
-The local executor was unavailable, so no local test/build/browser execution is claimed.
+| Check | Observed result |
+| --- | --- |
+| Node 22 npm run check | PASS; typecheck, asset inventory, unit tests, production build, dist audit |
+| Unit | 631 passed, 29 files |
+| Chromium | All four shards succeeded; native held-touch and actual touch placement passed |
+| Firefox | 147 passed, 3 Chromium-only native-touch skips; no retries |
+| WebKit | Job succeeded; 145 first-attempt passes, 2 retry recoveries, 3 Chromium-only skips |
+| Pages deployment in PR | Correctly skipped; existing dev-only deployment workflow unchanged |
+
+The two WebKit retry recoveries exposed a release/render race: fresh input could reach disabled
+widgets left over from the previous paused render. The follow-up synchronously rebuilds Canvas hit
+areas after quarantine/transaction release, outside input dispatch. It also adds 17 scene-level
+clock tests, covering defeat, each external reason, modal/busy/menu/orders states, drag boundaries
+and session/shared-ad resets. Existing assertions and CI timeout/sharding settings are unchanged.
+
+Current-head results and artifacts are maintained at
+[PR #20 checks](https://github.com/whil3true/block_workshop/pull/20/checks) and
+[workflow runs](https://github.com/whil3true/block_workshop/actions?query=branch%3Afeature%2Fyandex-release-monetization-splash).
+These current-head checks are authoritative for the follow-up; the table above is an identified
+historical execution, not a claim that an unexecuted follow-up already passed.
+
+![Current branch CI](https://github.com/whil3true/block_workshop/actions/workflows/ci.yml/badge.svg?branch=feature%2Fyandex-release-monetization-splash)
+
+The local executor was unavailable: validation ran on GitHub's Node 22 and production browser
+runners. No local test/build/browser run is claimed.
 
 Added coverage:
 - Controlled-clock threshold, inactive periods, no-fill backoff, re-entry/reset/disposal.
@@ -166,6 +187,11 @@ Added coverage:
   pagehide/pageshow, settings persistence, all campaign solutions and Pages subpath checks.
 
 Screenshots are written into Playwright test-results and uploaded by the unchanged CI artifact step.
+The verified run's [Chromium monetization/screenshots archive](https://github.com/whil3true/block_workshop/actions/runs/43974954120/artifacts/14279149782)
+contains `splash-{ru,en}-{320,360,393}.png`, `menu-*.png` and `classic-*.png`.
+[Firefox screenshots](https://github.com/whil3true/block_workshop/actions/runs/43974954120/artifacts/14280698316)
+and [WebKit screenshots](https://github.com/whil3true/block_workshop/actions/runs/43974954120/artifacts/14280569223)
+are also available. Use the current-head run's equivalent artifacts for its exact build.
 These are viewport emulations, not proof of physical Android operation.
 
 ## Fixed findings
@@ -180,7 +206,8 @@ These are viewport emulations, not proof of physical Android operation.
 8. Rewarded error/watchdog could return a previously granted flag; now rejects incomplete transactions.
 9. Rewarded opening did not postpone the next fullscreen; now shares the cooldown.
 10. Canvas-only covering could miss a frame while browser rendering was suspended; added a technical navigation shield.
-11. First Firefox regression run detected a blur-only overlay covering the restored figure; preserve its original appearance while focus remains a separate pause owner.
+11. A blur-only pause overlay covered restored figures; preserve the original appearance with focus as an independent pause owner.
+12. Fresh input could precede rebuilding enabled hit areas after release; synchronously refresh at the end of the external release transaction.
 
 ## Manual checklist in a real Yandex draft
 
@@ -209,13 +236,13 @@ These are viewport emulations, not proof of physical Android operation.
 | 1.6, 1.8, 1.10 | Existing resize/touch/viewport suites + RU/EN 320/360/393 screens; physical Android/fullscreen pending |
 | 1.9, 4.2 | Per-action local saves, completions, delayed reset; draft reload/ad-click checks pending |
 | 1.19.2–4 | Rendered-menu readiness, active-only gameplay marks, independent SDK lifecycle |
-| 1.14, 1.20 | Existing production suites in three browser engines; final rerun pending |
+| 1.14, 1.20 | Production suites in three browser engines; current-head result is linked above |
 | 2.14 | Existing saved language → SDK locale → fallback precedence preserved |
 | 4.1, 4.4–6 | Official formats only, action boundaries, voluntary rewarded, no custom advertisements |
 | 1.11, 1.15, 5.2 | Console configuration/final storefront metadata and real-draft review are publication tasks |
 
 ## Remaining blockers
 
-- Automated check and all browser CI results pending (technical blocker until green).
-- Real Yandex draft and physical Android QA pending. These block a publication verdict, not preparation for draft QA once CI is green.
+- No known outstanding implementation defect after the listed fixes. Any failed current-head mandatory CI check blocks use of that build.
+- Real Yandex draft and physical Android QA remain required before publication. Draft upload and testing can proceed once current-head CI is green.
 - Final approved name/storefront/media and console settings are separate publication tasks, intentionally unchanged here.

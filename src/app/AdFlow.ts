@@ -11,7 +11,7 @@ export class AdFlow<T extends RewardOffer> {
   gate: PauseGate; platform: PlatformService;
   interstitial: Pick<InterstitialController, 'tryShow'> & Partial<Pick<InterstitialController, 'recordShown'>>;
   cover: (visible: boolean) => void; afterFrame: () => Promise<void>;
-  restart: () => void; applyReward: (offer: T) => boolean;
+  restart: () => void; applyReward: (offer: T) => boolean; refreshAfterTransition?: () => void;
  }) {}
  get busy(): boolean { return this.pending || this.staged !== null; }
  async restart(): Promise<void> { return this.transition(this.deps.restart); }
@@ -34,6 +34,7 @@ export class AdFlow<T extends RewardOffer> {
    this.deps.gate.set('ad', false);
    this.pending = false;
    this.deps.gate.set('transition', false);
+   if (!this.disposed) this.deps.refreshAfterTransition?.();
   }
  }
  async reward(offer: T): Promise<boolean> {

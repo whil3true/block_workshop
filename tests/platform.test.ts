@@ -140,3 +140,14 @@ describe('release regression: callback idempotency and reward completion',()=>{
   await p;expect(ads.shownRevision).toBe(1);expect(ads.eligible).toBe(false);now+=89999;expect(ads.eligible).toBe(false);now++;expect(ads.eligible).toBe(true);
  });
 });
+
+it('transaction refresh follows gate release and destination construction, before admitting fresh input',async()=>{
+ const gate=new PauseGate(),destination=vi.fn();let finish!:()=>void;
+ const refresh=vi.fn(()=>{expect(gate.has('transition')).toBe(false);expect(destination).toHaveBeenCalledOnce();});
+ const flow=new AdFlow({gate,platform:new WebPlatform(),interstitial:{tryShow:async()=>false},
+  cover:()=>{},afterFrame:()=>new Promise<void>(r=>finish=r),restart:()=>{},applyReward:()=>true,refreshAfterTransition:refresh});
+ const p=flow.transition(destination);
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();
+ expect(refresh).not.toHaveBeenCalled();expect(gate.has('transition')).toBe(true);
+ finish();await p;expect(refresh).toHaveBeenCalledOnce();
+});

@@ -33,7 +33,7 @@ test('Classic active threshold waits for a completed drag, excludes pauses, retr
  await click(page,49,45);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(2);
  await click(page,240,580);expect((await snapshot(page)).score).toBe(3);
 });
-test('time spent in menu, settings, orders and defeat never creates an automatic ad',async({page})=>{
+test('time spent in menu, settings and orders never creates an automatic ad',async({page})=>{
  await sdk(page);await advance(page,200000);await click(page,240,690);await advance(page,200000);await click(page,240,667);
  await click(page,240,412);await advance(page,200000);await click(page,240,297);await advance(page,200000);
  await drag(page,0,8,4);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(0);
