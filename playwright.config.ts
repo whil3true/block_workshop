@@ -1,10 +1,11 @@
 import { defineConfig } from '@playwright/test';
 export default defineConfig({
- testDir: './tests/e2e', fullyParallel: false, workers: 1,
+ // Shard individual tests, including the large campaign file; keep software WebGL sequential per runner.
+ testDir: './tests/e2e', fullyParallel: true, workers: 1,
  // Hosted Chromium software WebGL is slower with all raster surfaces enabled.
  // Preserve assertion limits; budget only complete browser journeys.
  timeout: 90_000,
- forbidOnly: !!process.env['CI'], retries: process.env['CI'] ? 1 : 0, reporter: 'list',
+ forbidOnly: !!process.env['CI'], retries: process.env['CI'] ? 1 : 0, reporter: process.env['CI'] ? [['list'], ['json', { outputFile: 'test-results/results.json' }], ['blob']] : 'list',
  use: {
   baseURL: 'http://127.0.0.1:4180',
   // Recording a screenshot after every simulated pointer step forces expensive

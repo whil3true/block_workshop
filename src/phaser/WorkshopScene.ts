@@ -11,7 +11,7 @@ import type { AdFlow } from '../app/AdFlow';
 import type { LocaleRuntime } from '../app/LocaleRuntime';
 import type { Word } from '../app/Localization';
 import type { CampaignController } from '../campaign/CampaignSession';
-import { CAMPAIGN_CATALOG, CHAPTERS, findOrder, isOrderUnlocked } from '../campaign/CampaignCatalog';
+import { CAMPAIGN_CATALOG, CHAPTERS, displayChapterForOrder, findOrder, isOrderUnlocked } from '../campaign/CampaignCatalog';
 import { fragmentProgress, journalProgress, type TargetFragment } from '../campaign/OrderRules';
 import { configureLogicalCamera } from './Display';
 import { createPrimaryButton, createSecondaryButton, createUiText, createViewportBackdrop, createModalShell } from './UiPrimitives';
@@ -39,7 +39,6 @@ export class WorkshopScene extends Phaser.Scene {
  private screen: 'menu' | 'journal' | 'play' = 'menu';
  private mode: 'classic' | 'campaign' = 'classic';
  private chapter = 1;
- private journalPage = 0;
  private modal: Modal = null;
  private pendingExit: 'journal' | 'menu' | null = null;
  private ready = false;
@@ -192,19 +191,19 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private drawJournal(): void {
   const { locale, campaign } = this.services;
-  this.header(locale.t('orders'),() => this.navigate('menu'),false);
+  this.text(240,45,locale.t('orders'),'hudPrimary',300);
   const chapter = CHAPTERS[this.chapter-1]!;
   const orders = CAMPAIGN_CATALOG.filter(o => chapter.orderIds.includes(o.id));
-  this.text(240,112,`${locale.t('chapter')} ${chapter.number} · ${chapter.title[locale.locale]}`,'screenTitle',440);
+  this.text(240,112,chapter.title[locale.locale],'screenTitle',440);
   CHAPTERS.forEach((entry,i) => {
-   const x = [86,240,394][i]!;
-   this.root.add(this.add.container(0,0,[paperSurface(this,'chapter-tab',x,174,120,50,0x9cab86)]).setAlpha(entry.number === this.chapter ? 1 : .58));
-   this.text(x,174,`${entry.number} / 3`,'body',0,entry.number === this.chapter ? '#30452D' : '#7A6A60');
-   this.zone(`chapter-${entry.number}`,x,174,120,50,() => {
-    if (this.chapter !== entry.number) { this.chapter=entry.number; this.journalPage=0; this.invalidate(); }
+   const x = 60+i*72;
+   this.root.add(this.add.container(0,0,[paperSurface(this,'chapter-tab',x,174,66,66,0x9cab86)]).setAlpha(entry.number === this.chapter ? 1 : .58));
+   this.text(x,174,String(entry.number),'body',0,entry.number === this.chapter ? '#30452D' : '#7A6A60');
+   this.zone(`chapter-${entry.number}`,x,174,66,66,() => {
+    if (this.chapter !== entry.number) { this.chapter=entry.number; this.invalidate(); }
    });
   });
-  orders.slice(this.journalPage*3,this.journalPage*3+3).forEach((order,index) => {
+  orders.forEach((order,index) => {
    const y = 278 + index*135;
    const complete = campaign.completed.includes(order.id), unlocked = isOrderUnlocked(order.id,campaign.completed);
    this.surface('journal-card',240,y,416,120,unlocked ? 0xfff8f1 : 0xefe4d6);
@@ -216,24 +215,13 @@ export class WorkshopScene extends Phaser.Scene {
    const stats = journalProgress(order.fragments,complete,null);
    const status = stats ? `${locale.t('removed')} ${stats.removed}/${stats.total}` : locale.t(unlocked ? 'available' : 'locked');
    this.text(122,y+22,status,'caption',0,complete ? '#5B704D' : '#7A6A60').setOrigin(0,0.5).setName(`order-status-${order.id}`);
-   this.zone(`order-${this.journalPage*3+index+1}`,240,y,416,120,() => this.startOrder(order.id),!unlocked);
+   this.zone(`order-${index+1}`,240,y,416,120,() => this.startOrder(order.id),!unlocked);
   });
-  const pages = Math.ceil(orders.length/3);
-  this.text(240,650,`${this.journalPage+1} / ${pages}`,'body');
-  for (const direction of [-1,1]) {
-   const x = 240+direction*86, disabled = this.journalPage+direction < 0 || this.journalPage+direction >= pages;
-   this.surface('button-secondary',x,650,56,48);
-   this.text(x,648,direction === -1 ? '‹' : '›','screenTitle',0,disabled ? '#C9BEAA' : '#4E4038');
-   this.zone(direction === -1 ? 'journal-prev' : 'journal-next',x,650,56,48,() => { this.journalPage+=direction; this.invalidate(); },disabled);
-  }
   this.text(240,704,`${orders.filter(o=>campaign.completed.includes(o.id)).length} / ${orders.length} · ${locale.t('completed')}`,'caption',430,'#5B704D');
-  const next = CAMPAIGN_CATALOG.find(o => !campaign.completed.includes(o.id))?.id;
-  this.button('journal-continue',next ? 'play' : 'classic',240,756,() => {
-   if (next) this.startOrder(next); else { this.mode='classic'; if (this.services.model.gameOver) this.services.model.commitRestart(); this.navigate('play'); }
-  },360,false,true);
+  this.button('journal-back','back',240,756,() => this.navigate('menu'),360,false,true);
  }
  private startOrder(id: string, replay = false): void {
-  if (this.services.campaign.start(id,replay)) { this.chapter=findOrder(id)!.chapter; this.journalPage=Math.floor(CAMPAIGN_CATALOG.filter(o=>o.chapter===this.chapter).findIndex(o=>o.id===id)/3); this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
+  if (this.services.campaign.start(id,replay)) { this.chapter=displayChapterForOrder(id); this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
  }
  private drawPlay(): void {
   const { locale, model, campaign, platform } = this.services;

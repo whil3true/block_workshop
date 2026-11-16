@@ -28,10 +28,8 @@ const complete = (page: Page, moves: readonly (readonly [number,number,number])[
  moves.reduce<Promise<void>>(async (previous,[slot,row,col])=>{await previous;await drag(page,slot,row,col);},Promise.resolve());
 
 async function selectOrder(page: Page,index: number): Promise<void> {
- await click(page,[86,240,394][Math.floor(index/6)]!,174);
- const card=index%6;
- await click(page,154,650); // First page, including repeated selections in the same chapter.
- if(card>=3)await click(page,326,650);
+ await click(page,60+Math.floor(index/3)*72,174);
+ const card=index%3;
  await campaignSeed(page,[witnessSeed(CAMPAIGN_CATALOG[index]!.id)]);
  await click(page,240,278+(card%3)*135);
 }
@@ -87,7 +85,7 @@ test('first three orders: exit and reload discard partial play but earned comple
  await page.screenshot({path:info.outputPath('first-three-completed.png')});
  await click(page,240,626); // Order 03 result -> chapter journal.
  await page.screenshot({path:info.outputPath('journal-completed.png')});
- await click(page,49,45);await click(page,240,580);
+ await click(page,240,756);await click(page,240,580);
  expect(await snapshot(page)).toEqual(classicBefore);
  await drag(page,0,0,0);expect((await snapshot(page)).score).toBe(18);
 });
@@ -274,7 +272,7 @@ test('Esc exit confirmation can be cancelled without restarting the unfinished o
 test('Esc confirms unfinished campaign exit to main menu and re-entry starts fresh',async({page})=>{
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
  await drag(page,0,8,4);
- await page.keyboard.press('Escape'); // Open exit warning.
+ await page.keyboard.press('Escape');await frames(page); // Wait for the warning's real Canvas hit areas before confirming.
  await click(page,240,518); // Confirm exit to menu.
  await click(page,240,412);await click(page,240,278);
  // A fresh attempt must accept the complete original solution.
@@ -293,7 +291,7 @@ test('completed campaign result can return to menu without exit warning',async({
 
 // Real Canvas input with an UNCOMPLETED selected order. A saved new ID proves the
 // game accepted the drags and reached its result; replaying an already-earned ID cannot do that.
-for(const [index,order] of CAMPAIGN_CATALOG.entries()) {
+for(const [index] of CAMPAIGN_CATALOG.entries()) {
  test(`constructive Canvas solution earns order ${index+1}`,async({page},info)=>{
   await seedAchievements(page,CAMPAIGN_CATALOG.slice(0,index).map(o=>o.id));
   await seed(page,{locale:index%2?'en':'ru',score:42});await open(page);
@@ -303,19 +301,18 @@ for(const [index,order] of CAMPAIGN_CATALOG.entries()) {
   expect((await campaign(page))?.completedOrderIds).toEqual(CAMPAIGN_CATALOG.slice(0,index+1).map(o=>o.id));
   expect(await snapshot(page)).toEqual(classic);
   await page.screenshot({path:info.outputPath(`order-${String(index+1).padStart(2,'0')}-won.png`)});
-  if(index===5||index===11) {
+  if([2,5,8,11,14].includes(index)) {
    await campaignSeed(page,[witnessSeed(CAMPAIGN_CATALOG[index+1]!.id)]);
    await click(page,240,480); // Cross a chapter boundary using the real victory action.
    await complete(page,WITNESSES[index+1]!);
    expect((await campaign(page))?.completedOrderIds).toContain(CAMPAIGN_CATALOG[index+1]!.id);
    await click(page,240,626); // Journal follows the chapter entered by Next order.
-   await page.screenshot({path:info.outputPath(`chapter-${order.chapter+1}-after-next.png`)});
+   await page.screenshot({path:info.outputPath(`chapter-${Math.floor(index/3)+2}-after-next.png`)});
   }
   if(index===17) {
-   await click(page,240,480); // Final collection -> journal, with six of six in chapter 3.
+   await click(page,240,480); // Final collection -> journal, with three of three in chapter 6.
    await page.screenshot({path:info.outputPath('final-collection-journal.png')});
-   await selectOrder(page,17);await complete(page,WITNESSES[17]!); // Free replay.
-   expect((await campaign(page))?.completedOrderIds).toHaveLength(18);
+
   }
  });
 }
@@ -332,19 +329,17 @@ for(const index of [3,8,11,14,17]) {
 }
 
 for(const locale of ['ru','en'])for(const width of [320,360,393]) {
- test(`three complete chapter layouts ${locale} ${width}px, legacy three-order save`,async({page},info)=>{
+ test(`six complete chapter layouts ${locale} ${width}px, legacy three-order save`,async({page},info)=>{
   // This is the exact v2 achievements-only shape shipped before expansion.
   await seedAchievements(page,CAMPAIGN_CATALOG.slice(0,3).map(o=>o.id));
   await seed(page,{locale});await page.setViewportSize({width,height:Math.round(width*16/9)});await open(page);
   await click(page,240,412);
-  for(let chapter=1;chapter<=3;chapter++) {
-   await click(page,[86,240,394][chapter-1]!,174);
-   await page.screenshot({path:info.outputPath(`chapter-${chapter}-page-1-${locale}-${width}.png`)});
-   await click(page,326,650);
-   await page.screenshot({path:info.outputPath(`chapter-${chapter}-page-2-${locale}-${width}.png`)});
+  for(let chapter=1;chapter<=6;chapter++) {
+   await click(page,60+(chapter-1)*72,174);
+   await page.screenshot({path:info.outputPath(`chapter-${chapter}-${locale}-${width}.png`)});
    // Selecting a locked late card leaves the journal intact and does not earn anything.
-   const before=await boardPixels(page);await click(page,240,548);
-   expect((await boardPixels(page)).equals(before)).toBe(true);
+   if(chapter>1){const before=await boardPixels(page);await click(page,240,548);
+   expect((await boardPixels(page)).equals(before)).toBe(true);}
   }
   expect((await campaign(page))?.notice).toBeNull();
   expect((await campaign(page))?.completedOrderIds).toEqual(CAMPAIGN_CATALOG.slice(0,3).map(o=>o.id));
@@ -354,25 +349,49 @@ for(const locale of ['ru','en'])for(const width of [320,360,393]) {
 }
 
 
-test('real crowded order 18 reaches defeat and its free retry can complete the collection',async({page},info)=>{
+// Keep the full original crowding path, but give defeat/navigation its own budget.
+test('real crowded order 18 reaches defeat and returns to chapter 6',async({page},info)=>{
  await seedAchievements(page,CAMPAIGN_CATALOG.slice(0,17).map(o=>o.id));
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await selectOrder(page,17);
- await campaignSeed(page,[17,witnessSeed(CAMPAIGN_CATALOG[17]!.id)]);
- await click(page,130,759);await click(page,240,450);
+ await campaignSeed(page,[17]);await click(page,130,759);await click(page,240,450);
  await complete(page,DEFEAT_18);
  expect((await campaign(page))?.completedOrderIds).toHaveLength(17);
  await page.screenshot({path:info.outputPath('order-18-real-defeat.png')});
+ await click(page,240,480);
+ await page.screenshot({path:info.outputPath('order-18-defeat-chapter-6.png')});
+ await campaignSeed(page,[witnessSeed(CAMPAIGN_CATALOG[17]!.id)]);
+ await click(page,240,548); // Chapter 6's third card is still order 18.
+ const before=await boardPixels(page);await dragMove(page,WITNESSES[17]![0]!);
+ expect((await boardPixels(page)).equals(before)).toBe(false);
+});
+
+// A second, independently generated real defeat reaches the same terminal UI in
+// five moves. The complete retry -> victory journey retains real Canvas drags.
+test('order 18 free retry after real defeat completes the collection',async({page},info)=>{
+ const prefix=CAMPAIGN_CATALOG.slice(0,17).map(o=>o.id);
+ await seedAchievements(page,prefix);await seed(page,{locale:'en'});await open(page);await click(page,240,412);
+ await click(page,420,174);await campaignSeed(page,[2710938419,witnessSeed(CAMPAIGN_CATALOG[17]!.id)]);
+ await click(page,240,548);
+ await complete(page,[[0,0,3],[1,2,2],[2,3,0],[0,3,5],[2,5,3]]);
+ expect((await campaign(page))?.completedOrderIds).toEqual(prefix);
  await click(page,240,553); // Existing free result retry; no ad or confirmation.
  await complete(page,WITNESSES[17]!);
- expect((await campaign(page))?.completedOrderIds).toHaveLength(18);
+ expect((await campaign(page))?.completedOrderIds).toEqual(CAMPAIGN_CATALOG.map(o=>o.id));
  await page.screenshot({path:info.outputPath('order-18-after-defeat-retry.png')});
 });
 
-test('random opening changes on retry and reentry, while journal returns to the selected page',async({page},info)=>{
+test('final completed order remains freely replayable from chapter 6',async({page})=>{
+ await seedAchievements(page,CAMPAIGN_CATALOG.map(o=>o.id));await seed(page,{locale:'en'});
+ await open(page);await click(page,240,412);await selectOrder(page,17);
+ await complete(page,WITNESSES[17]!);
+ expect((await campaign(page))?.completedOrderIds).toHaveLength(18);
+});
+
+test('random opening changes on retry and reentry, while journal returns to the selected chapter',async({page},info)=>{
  await seedAchievements(page,CAMPAIGN_CATALOG.slice(0,3).map(o=>o.id));
- await seed(page,{locale:'ru'});await open(page);await click(page,240,412);await click(page,326,650);
+ await seed(page,{locale:'ru'});await open(page);await click(page,240,412);await click(page,132,174);
  await campaignSeed(page,[123,456,789]);
- await click(page,240,278); // Order 04, page 2.
+ await click(page,240,278); // Order 04, chapter 2.
  const tray=async()=>{
   const a=await point(page,20,614),b=await point(page,460,726);
   return page.screenshot({clip:{x:a.x,y:a.y,width:b.x-a.x,height:b.y-a.y}});
@@ -381,8 +400,8 @@ test('random opening changes on retry and reentry, while journal returns to the 
  await page.screenshot({path:info.outputPath('random-order-04-first.png')});
  await click(page,130,759);await click(page,240,450);
  const retry=await tray();expect(retry.equals(first),'Retry consumes new entropy and changes the actual rendered pieces').toBe(false);
- await click(page,49,45); // No moves: direct return to page 2.
- await page.screenshot({path:info.outputPath('journal-retains-order-04-page.png')});
+ await click(page,49,45); // No moves: direct return to chapter 2.
+ await page.screenshot({path:info.outputPath('journal-retains-order-04-chapter.png')});
  await click(page,240,278); // Same location is still order 04, now with a third seed.
  expect((await tray()).equals(retry)).toBe(false);
  const boardBefore=await boardPixels(page);
@@ -409,13 +428,40 @@ for(const locale of ['ru','en'] as const) {
   await click(page,240,412);
   for(const viewport of [{width:852,height:393},{width:1280,height:800}]){
    await page.setViewportSize(viewport);await frames(page);
-   for(let chapter=1;chapter<=3;chapter++){
-    await click(page,[86,240,394][chapter-1]!,174);await click(page,154,650);
-    for(let pageIndex=0;pageIndex<2;pageIndex++){
-     if(pageIndex)await click(page,326,650);
-     await page.screenshot({path:info.outputPath(`journal-${locale}-${viewport.width}-chapter-${chapter}-page-${pageIndex+1}.png`)});
-    }
+   for(let chapter=1;chapter<=6;chapter++){
+    await click(page,60+(chapter-1)*72,174);
+    await page.screenshot({path:info.outputPath(`journal-${locale}-${viewport.width}-chapter-${chapter}.png`)});
    }
   }
  });
 }
+
+test.describe('Android journal navigation',()=>{
+ test.use({userAgent:'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36',hasTouch:true});
+for(const locale of ['ru','en'])for(const width of [320,360,393]) {
+ test(`journal single navigation, Back and Esc preserve completed orders and Classic ${locale} ${width}px`,async({page},info)=>{
+  const ids=CAMPAIGN_CATALOG.map(o=>o.id);
+  await seedAchievements(page,ids);await seed(page,{locale,score:71});
+  await page.setViewportSize({width,height:Math.round(width*16/9)});await open(page);
+  const saved=await snapshot(page);
+  await click(page,240,412);
+  const initial=await page.screenshot();
+  // Removed controls must have no hidden interactive zone, even with all orders completed.
+  for(const [x,y]of [[49,45],[154,650],[326,650]])await click(page,x!,y!);
+  expect((await page.screenshot()).equals(initial)).toBe(true);
+  for(let chapter=1;chapter<=6;chapter++){
+   await click(page,60+(chapter-1)*72,174);
+   await page.screenshot({path:info.outputPath(`journal-${locale}-${width}-chapter-${chapter}.png`)});
+   expect(await page.evaluate(()=>({x:scrollX,y:scrollY,width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight})))
+    .toEqual({x:0,y:0,width,height:Math.round(width*16/9)});
+  }
+  await click(page,240,756); // Back must return to menu, including with a finished campaign.
+  await click(page,240,412); // Menu Orders opens the same selected chapter.
+  await page.keyboard.press('Escape');await frames(page);
+  await click(page,240,565);await drag(page,0,0,0);
+  expect((await snapshot(page)).score).toBe(saved.score+1);
+  expect((await campaign(page))?.completedOrderIds).toEqual(ids);
+ });
+}
+
+});

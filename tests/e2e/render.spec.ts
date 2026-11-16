@@ -25,13 +25,21 @@ test('raster surfaces render in Canvas fallback and frame times stay bounded wit
   }
   requestAnimationFrame(tick);
  }));
- const path=info.outputPath('raster-frame-times.json');await writeFile(path,JSON.stringify({...timings,renderer:panel===null?'WebGL':'Canvas',raster:hasArt},null,2));
+ const driver=await page.evaluate(()=>{
+  const canvas=document.querySelector('canvas')!;
+  const gl=canvas.getContext('webgl2')??canvas.getContext('webgl');
+  if(!gl)return null;
+  const debug=gl.getExtension('WEBGL_debug_renderer_info');
+  return {vendor:gl.getParameter(gl.VENDOR),renderer:gl.getParameter(gl.RENDERER),
+   unmaskedRenderer:debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):null};
+ });
+ const path=info.outputPath('raster-frame-times.json');await writeFile(path,JSON.stringify({...timings,renderer:panel===null?'WebGL':'Canvas',driver,raster:hasArt},null,2));
  await info.attach('raster-frame-times.json',{path,contentType:'application/json'});
  // A one-second freeze is a failure, not a reason to increase the suite timeout.
  expect(timings.max).toBeLessThan(1000);await drag(page,0,8,4);
  await click(page,49,45); // Opens the new unfinished-order exit confirmation.
  await click(page,240,518); // Confirm: discard and open Order journal.
- await click(page,49,45); // Journal -> main menu.
+ await click(page,240,756); // Journal -> main menu.
  await click(page,240,580); // Classic.
  await drag(page,0,0,0);
  expect((await snapshot(page)).score).toBe(1);
