@@ -198,9 +198,9 @@ export class WorkshopScene extends Phaser.Scene {
   CHAPTERS.forEach((entry,i) => {
    const x = [86,252,399][i]!;
    if (entry.orderIds.length) {
-    this.surface('chapter-tab',x,174,120,50,0x9cab86);this.text(x,174,`${entry.number} / 3`,'body');
+    this.surface('chapter-tab',x,174,120,50,entry.number === this.chapter ? 0x9cab86 : 0xefe4d6);this.text(x,174,`${entry.number} / 3`,'body');
     this.zone(`chapter-${entry.number}`,x,174,120,60,() => {this.chapter=entry.number;this.invalidate();});
-   } else this.text(x,174,`${entry.number} · ${locale.t('soon')}`,'caption',140,'#7A6A60');
+   }
   });
   const columns = orders.length > 3 ? 2 : 1;
   orders.forEach((order,index) => {
@@ -210,7 +210,8 @@ export class WorkshopScene extends Phaser.Scene {
    this.surface('journal-card',x,y,cardWidth,120,unlocked ? 0xfff8f1 : 0xefe4d6);
    if (columns === 1) this.text(82,y-12,String(CAMPAIGN_CATALOG.indexOf(order)+1).padStart(2,'0'),'screenTitle');
    this.icon(complete ? 'check' : unlocked ? 'play' : 'lock',columns === 1 ? 82 : x-74,y+26,28,complete ? '✓' : unlocked ? '›' : '•');
-   const title = this.text(0,-32,order.title[locale.locale],'body',textWidth);
+   const number = String(CAMPAIGN_CATALOG.indexOf(order)+1).padStart(2,'0');
+   const title = this.text(0,-32,`${number} · ${order.title[locale.locale]}`,'body',textWidth);
    const state = this.text(0,0,locale.t(complete ? 'completed' : unlocked ? 'available' : 'locked'),'caption',textWidth,complete ? '#5B704D' : '#7A6A60');
    const stats = journalProgress(order.fragments,complete,null);
    const progress = stats ? `${locale.t('removed')}: ${stats.removed}/${stats.total}` : `${order.fragments.length} · ${locale.t('fragments')}`;
@@ -220,7 +221,6 @@ export class WorkshopScene extends Phaser.Scene {
    copy.y += y - 3 - copy.getBounds().centerY;
    this.zone(`order-${index+1}`,x,y,cardWidth,120,() => this.startOrder(order.id),!unlocked);
   });
-  this.text(240,667,locale.t('future'),'caption',420,'#7A6A60');
   this.text(240,704,`${orders.filter(o=>campaign.completed.includes(o.id)).length} / ${orders.length} · ${locale.t('completed')}`,'caption',430,'#5B704D');
   const next = CAMPAIGN_CATALOG.find(o => !campaign.completed.includes(o.id))?.id;
   this.button('journal-continue',next ? 'play' : 'classic',240,756,() => {
@@ -228,7 +228,7 @@ export class WorkshopScene extends Phaser.Scene {
   },360,false,true);
  }
  private startOrder(id: string, replay = false): void {
-  if (this.services.campaign.start(id,replay)) { this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
+  if (this.services.campaign.start(id,replay)) { this.chapter=findOrder(id)!.chapter; this.mode='campaign'; this.comboRemaining=0; this.commitNavigation('play'); this.services.audio.unlock(); }
  }
  private drawPlay(): void {
   const { locale, model, campaign, platform } = this.services;

@@ -59,7 +59,7 @@ for (const [index,order] of CAMPAIGN_CATALOG.entries()) {
   it('clearing an entirely new line earns score but no target progress',()=>{
    let state=initialAttempt(order);
    // Add ordinary blocks to an otherwise empty row. None is a target.
-   const board=state.board.map(r=>[...r]);const row=index===2?7:9;
+   const board=state.board.map(r=>[...r]);const row=board.findIndex((_,r)=>!state.remainingTargets.some(cell=>Math.floor(cell/10)===r));
    for(let c=0;c<10;c++)board[row]![c]='single';board[row]![5]=null;
    state={...state,board,trayIds:['single','single','single']};
    const next=placeCampaign(state,0,row,5);
@@ -69,7 +69,8 @@ for (const [index,order] of CAMPAIGN_CATALOG.entries()) {
    const initial=initialAttempt(order);
    const board:CellState[][]=Array.from({length:10},(_,r)=>Array.from({length:10},(_,c)=>(r+c)%2===0?null:'sq2'));
    for(const cell of initial.remainingTargets)board[Math.floor(cell/10)]![cell%10]=order.board[Math.floor(cell/10)]![cell%10]!;
-   const failed=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,9,3);
+   const address=board.flatMap((row,r)=>row.map((cell,c)=>cell===null?r*10+c:-1)).find(cell=>cell>=0)!;
+   const failed=placeCampaign({...initial,board,trayIds:['single','square-3','square-3']},0,Math.floor(address/10),address%10);
    expect(failed.status).toBe('failed');
    // An older v2 record may still contain the defeated attempt; it must not resume.
    const raw={app:'block-workshop',mode:'campaign',schemaVersion:2,catalogVersion:2,targetRulesVersion:2,completedOrderIds:prefix(index),active:failed};
@@ -126,7 +127,7 @@ it('unlocks only released orders; a completed replay preserves completion',()=>{
  const controller=new CampaignController();expect(controller.start(CAMPAIGN_CATALOG[2]!.id)).toBe(false);controller.start(CAMPAIGN_CATALOG[0]!.id);
  for(const move of WITNESSES[0])controller.place(move[0],move[1],move[2]);
  expect(isOrderUnlocked(CAMPAIGN_CATALOG[1]!.id,controller.completed)).toBe(true);controller.start(CAMPAIGN_CATALOG[0]!.id,true);expect(controller.completed).toHaveLength(1);
- expect(CHAPTERS).toHaveLength(3);expect(CHAPTERS[1].orderIds).toHaveLength(0);expect(CHAPTERS[2].orderIds).toHaveLength(0);
+ expect(CHAPTERS).toHaveLength(3);for(const chapter of CHAPTERS)expect(chapter.orderIds).toHaveLength(6);
 });
 it('keeps deterministic fallback RNG and tray cursor within a single attempt',()=>{
  let state=initialAttempt(CAMPAIGN_CATALOG[0]!), fallbackReached=false;
@@ -232,4 +233,43 @@ it('legacy v2 active snapshot is ignored without migration alert or progress los
  expect(c.start(order.id)).toBe(true);
  expect(c.active).toEqual(initialAttempt(order));
  expect(JSON.parse(localStorage.getItem(CAMPAIGN_KEY)!).active).not.toBeTruthy();
+});
+
+it('is a complete, unique 3 × 6 campaign with valid fixed deals and explicit short solutions',()=>{
+ expect(CAMPAIGN_CATALOG).toHaveLength(18);expect(WITNESSES).toHaveLength(18);expect(RECOVERY_PATHS).toHaveLength(18);
+ expect(new Set(CAMPAIGN_CATALOG.map(o=>o.id)).size).toBe(18);
+ expect(new Set(CAMPAIGN_CATALOG.map(o=>JSON.stringify(o.board))).size).toBe(18);
+ for(const [i,o] of CAMPAIGN_CATALOG.entries()){
+  expect(o.chapter).toBe(Math.floor(i/6)+1);expect(o.seed).toBeGreaterThan(0);
+  expect(o.fragments.length).toBeGreaterThanOrEqual(1);expect(o.fragments.length).toBeLessThanOrEqual(3);
+  expect(o.board).toHaveLength(10);o.board.forEach(row=>expect(row).toHaveLength(10));
+  expect(o.title.ru.length).toBeGreaterThan(0);expect(o.title.en.length).toBeGreaterThan(0);
+  for(const f of o.fragments)for(const cell of f.cells){expect(Number.isInteger(cell)).toBe(true);expect(cell).toBeGreaterThanOrEqual(0);expect(cell).toBeLessThan(100);}
+  for(const tray of o.trays){expect(tray).toHaveLength(3);tray.forEach(id=>expect(findPieceById(id)).toBeDefined());}
+  expect(WITNESSES[i]!.length).toBeLessThanOrEqual(8);
+  // Main AND recovery end inside authored deals, before random fallback.
+  for(const path of [WITNESSES[i]!,RECOVERY_PATHS[i]!]) {
+   let s=initialAttempt(o);
+   for(const m of path){expect(s.nextTrayIndex).toBeLessThanOrEqual(o.trays.length);s=simulate(s,m);}
+   expect(s.status).toBe('succeeded');expect(s.rngState).toBe(o.seed);
+  }
+ }
+});
+it('preserves the shipped three-order completion prefix and unlocks 04 without a migration notice',()=>{
+ localStorage.setItem(CAMPAIGN_KEY,JSON.stringify({app:'block-workshop',mode:'campaign',schemaVersion:2,catalogVersion:2,targetRulesVersion:2,completedOrderIds:prefix(3),active:null,notice:null}));
+ const c=new CampaignController();expect(c.completed).toEqual(prefix(3));expect(c.notice).toBeNull();
+ expect(c.start(CAMPAIGN_CATALOG[3]!.id)).toBe(true);expect(c.start(CAMPAIGN_CATALOG[4]!.id)).toBe(false);
+ for(const m of WITNESSES[3]!)expect(step(c,m)).toBe(true);
+ expect(new CampaignController().completed).toEqual(prefix(4));
+});
+it('unlocks exactly one next order at every prefix, including both chapter boundaries and final replay',()=>{
+ for(let count=0;count<=18;count++)for(const [index,o] of CAMPAIGN_CATALOG.entries())expect(isOrderUnlocked(o.id,prefix(count))).toBe(index<=count);
+ const c=new CampaignController();
+ for(const [index,o] of CAMPAIGN_CATALOG.entries()){
+  expect(c.start(o.id)).toBe(true);for(const m of WITNESSES[index]!)expect(step(c,m)).toBe(true);
+  expect(c.completed).toEqual(prefix(index+1));
+  expect(CHAPTERS[o.chapter-1]!.orderIds.filter(id=>c.completed.includes(id))).toHaveLength(index%6+1);
+ }
+ expect(c.start(CAMPAIGN_CATALOG[17]!.id,true)).toBe(true);for(const m of WITNESSES[17]!)step(c,m);
+ expect(c.completed).toEqual(prefix(18));expect(loadCampaign().completedOrderIds).toEqual(prefix(18));
 });

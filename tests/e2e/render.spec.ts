@@ -14,7 +14,7 @@ test('raster surfaces render in Canvas fallback and frame times stay bounded wit
  });
  const hasArt=await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundImage.includes('paper.webp'));
  if(hasArt && panel!==null)expect(panel,'Raster menu panel must be visible in Canvas renderer').toBeGreaterThan(220);
- await click(page,240,412);await click(page,240,278);await frames(page);
+ await click(page,240,412);await click(page,128,278);await frames(page);
  const timings=await page.evaluate(()=>new Promise<{p50:number;p95:number;max:number;samples:number}>(resolve=>{
   const samples:number[]=[];let previous=performance.now();
   function tick(now:number):void {
@@ -57,6 +57,6 @@ test('relative build resolves fonts, art and full-viewport paper beneath a Pages
   const paper=await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundImage);
   if(process.env['EXPECT_COZY_ART']==='1')expect(paper).toContain(`${origin}${prefix}assets/cozy-mosaic/paper.webp`);
   await page.setViewportSize({width:1000,height:600});await frames(page);await page.screenshot({path:info.outputPath('pages-prefix.png')});
-  await click(page,240,412);await click(page,240,278);await drag(page,0,8,4);expect(failures).toEqual([]);
+  await click(page,240,412);await click(page,128,278);await drag(page,0,8,4);expect(failures).toEqual([]);
  } finally {server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));}
 });
