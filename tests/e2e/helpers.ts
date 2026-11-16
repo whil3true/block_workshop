@@ -28,10 +28,15 @@ export async function point(page: Page, x: number, y: number) {
  return (await points(page,[{x,y}]))[0]!;
 }
 export async function click(page: Page, x: number, y: number) {
- const p = await point(page,x,y); await page.mouse.click(p.x,p.y); await frames(page);
+ const p = await point(page,x,y); await page.mouse.click(p.x,p.y); await frames(page,3);
 }
-export async function frames(page: Page) {
- await page.evaluate(() => new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+export async function frames(page: Page, count = 2) {
+ // AdFlow releases its gate after two RAFs; a clicked destination needs the
+ // following Phaser render to rebuild enabled hit areas before the next input.
+ await page.evaluate(count => new Promise<void>(resolve => {
+  const tick = (): void => { if (--count <= 0) resolve(); else requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+ }),count);
 }
 export async function open(page: Page, url = '/', waitForReady = true) {
  await page.goto(url); await expect(page.locator('canvas')).toBeVisible();

@@ -65,3 +65,7 @@ Reviewed mobile evidence: [RU 320px](evidence/journal-navigation/journal-ru-320-
 The six Android user-agent/touch navigation checks pass in 18.1s locally. The updated first-three-orders journey passes in 24.7s after replacing its obsolete journal-arrow click with the new bottom Back button.
 
 The first complete matrix exposed two WebKit retry-only passes: a click immediately after Escape could precede creation of the warning's Canvas zones, and Classic's reload journey used two frames without waiting for async startup readiness. Both tests now wait for their real preconditions (rendered warning / `aria-busy=false`), preserving all actions and assertions without sleeps or larger timeouts.
+
+A repeated matrix also exposed a Firefox Next-order race: `AdFlow.afterFrame()` owns two RAFs, then releases its pause gate and invalidates enabled input zones for the following Phaser render. The optimized click helper's two RAFs could finish at that same boundary. Clicks now wait three RAFs (the real destination render); generic frame waits and drag pointer events remain unchanged. This removes reliance on incidental protocol round-trip latency rather than changing game transitions.
+
+With the destination-render barrier, the previously flaky 03 → 04 Canvas journey passed 30 consecutive Firefox runs with retries disabled.
