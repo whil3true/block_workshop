@@ -1,5 +1,5 @@
 /** Hand-authored constructive solutions. [tray slot, row, column], zero-based. */
-export const WITNESSES = [
+export const CONSTRUCTIVE_WITNESSES = [
  [[0,8,4],[1,8,7],[2,8,9]],
  [[0,7,5],[1,4,7],[2,7,7]],
  [[0,4,3],[1,6,6],[2,9,0],[0,4,0],[1,4,6]],
@@ -23,7 +23,7 @@ export const WITNESSES = [
 export const COLUMN_FIRST = [[1,4,7],[2,7,7],[0,7,5]] as const;
 export const SIMULTANEOUS = [[1,4,7],[0,7,5]] as const;
 /** A wasted single, then a complete legal recovery, with no reward or restart. */
-export const RECOVERY_PATHS = [
+export const CONSTRUCTIVE_RECOVERY_PATHS = [
  [[2,0,0],[0,8,4],[1,8,7],[0,8,9]],
  [[2,0,0],[1,4,7],[0,7,5]],
  [[2,9,4],[0,4,3],[1,6,6],[0,4,6],[1,9,0],[2,9,6],[0,4,0]],
@@ -45,4 +45,20 @@ export const RECOVERY_PATHS = [
 ] as const;
 
 /** Deliberate crowding produces a real terminal defeat in order 18, without a mock state. */
-export const DEFEAT_18 = [[0, 4, 3], [1, 5, 6], [2, 0, 3], [1, 1, 4], [2, 3, 0], [0, 3, 2], [2, 4, 1], [0, 4, 9], [1, 7, 4], [2, 6, 5], [0, 3, 6]] as const;
+export const CONSTRUCTIVE_DEFEAT_18 = [[0, 4, 3], [1, 5, 6], [2, 0, 3], [1, 1, 4], [2, 3, 0], [0, 3, 2], [2, 4, 1], [0, 4, 9], [1, 7, 4], [2, 6, 5], [0, 3, 6]] as const;
+
+// Reproducible QA examples from the actual random generator. Never imported by src/.
+import RANDOM_SCENARIOS from './campaign-random-scenarios.json' with { type: 'json' };
+export { RANDOM_SCENARIOS };
+const moves = (rows: readonly (readonly number[])[]): readonly (readonly [number,number,number])[] => rows.map(row=> {
+ if(row.length!==3)throw new Error('Invalid QA move');return [row[0]!,row[1]!,row[2]!] as const;
+});
+export const WITNESSES = [
+ CONSTRUCTIVE_WITNESSES[0],CONSTRUCTIVE_WITNESSES[1],CONSTRUCTIVE_WITNESSES[2], ...RANDOM_SCENARIOS.map(s=>moves(s.witness.moves)),
+] as const;
+export const RECOVERY_PATHS = [
+ CONSTRUCTIVE_RECOVERY_PATHS[0],CONSTRUCTIVE_RECOVERY_PATHS[1],CONSTRUCTIVE_RECOVERY_PATHS[2], ...RANDOM_SCENARIOS.map(s=>moves(s.recovery.moves)),
+] as const;
+export const DEFEAT_18 = moves(RANDOM_SCENARIOS[14]!.defeat.moves);
+export const witnessSeed = (id: string): number => RANDOM_SCENARIOS.find(s=>s.id===id)?.witness.seed ?? 1;
+export const recoverySeed = (id: string): number => RANDOM_SCENARIOS.find(s=>s.id===id)?.recovery.seed ?? 1;

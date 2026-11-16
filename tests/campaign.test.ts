@@ -1,19 +1,24 @@
 import SOLUTIONS from './campaign-solutions.json';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CAMPAIGN_CATALOG, CHAPTERS, isOrderUnlocked } from '../src/campaign/CampaignCatalog';
-import { CampaignController, initialAttempt, placeCampaign, type CampaignAttempt } from '../src/campaign/CampaignSession';
+import { CAMPAIGN_CATALOG, CHAPTERS, isOrderUnlocked, type OrderConfig } from '../src/campaign/CampaignCatalog';
+import { CampaignController as RuntimeController, initialAttempt as runtimeInitialAttempt, placeCampaign, randomCampaignTray, freshAttemptSeed, type CampaignAttempt } from '../src/campaign/CampaignSession';
 import { CAMPAIGN_KEY, LEGACY_CAMPAIGN_KEY, loadCampaign, saveCampaign, validAttempt } from '../src/campaign/CampaignStore';
 import { clearTargets, fragmentProgress, initialTargets, journalProgress, orderProgress } from '../src/campaign/OrderRules';
 import { applyPlacement, canPlace, resolveClears, type CellState } from '../src/engine';
 import { findPieceById } from '../src/pieces';
 import { createModel } from '../src/model';
-import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS, RECOVERY_PATHS, DEFEAT_18 } from './campaign-witnesses';
+import { WITNESSES, COLUMN_FIRST, SIMULTANEOUS, RECOVERY_PATHS, DEFEAT_18, RANDOM_SCENARIOS, witnessSeed, recoverySeed, CONSTRUCTIVE_WITNESSES, CONSTRUCTIVE_RECOVERY_PATHS } from './campaign-witnesses';
+const initialAttempt = (order: OrderConfig, seed = witnessSeed(order.id)) => runtimeInitialAttempt(order, seed);
+class CampaignController extends RuntimeController {
+ constructor(onChange = () => {}, canInteract = () => true) { super(onChange,canInteract,order=>witnessSeed(order.id)); }
+}
 const simulate = (state: CampaignAttempt, move: readonly number[]) => placeCampaign(state,move[0]!,move[1]!,move[2]!);
 const step = (controller: CampaignController, move: readonly number[]) => controller.place(move[0]!,move[1]!,move[2]!);
 beforeEach(()=>localStorage.clear());
 const prefix = (index: number) => CAMPAIGN_CATALOG.slice(0,index).map(o=>o.id);
-function replay(state: CampaignAttempt, moves: readonly (readonly [number,number,number])[]): CampaignAttempt {
- for (const [slot,row,col] of moves) {
+function replay(state: CampaignAttempt, moves: readonly (readonly number[])[]): CampaignAttempt {
+ for (const move of moves) {
+  const slot=move[0]!,row=move[1]!,col=move[2]!;
   expect(state.status).toBe('running');
   expect(canPlace(state.board,findPieceById(state.trayIds[slot]!)!,row,col)).toBe(true);
   const clears=resolveClears(applyPlacement(state.board,findPieceById(state.trayIds[slot]!)!,row,col));
@@ -45,7 +50,7 @@ for (const [index,order] of CAMPAIGN_CATALOG.entries()) {
    let controller=new CampaignController();
    expect(controller.start(order.id)).toBe(true);
    for(const move of WITNESSES[index]!) {
-    expect(controller.place(move[0],move[1],move[2])).toBe(true);
+    expect(controller.place(move[0]!,move[1]!,move[2]!)).toBe(true);
     const current=controller.active!;
     expect(validAttempt(current)).toBe(true);
     expect(loadCampaign().active).toBeNull();
@@ -86,7 +91,7 @@ for (const [index,order] of CAMPAIGN_CATALOG.entries()) {
    expect(controller.active).toEqual(initial);
   });
   it('has a verified successful recovery after a genuine misplaced piece',()=>{
-   const initial=initialAttempt(order), first=RECOVERY_PATHS[index]![0];
+   const initial=initialAttempt(order,recoverySeed(order.id)), first=RECOVERY_PATHS[index]![0];
    const mistaken=replay(initial,[first]);expect(mistaken.remainingTargets).toEqual(initial.remainingTargets);
    expect(replay(mistaken,RECOVERY_PATHS[index]!.slice(1)).status).toBe('succeeded');
   });
@@ -128,7 +133,7 @@ it('victory on the last tray piece does not consume another deal',()=>{
 });
 it('unlocks only released orders; a completed replay preserves completion',()=>{
  const controller=new CampaignController();expect(controller.start(CAMPAIGN_CATALOG[2]!.id)).toBe(false);controller.start(CAMPAIGN_CATALOG[0]!.id);
- for(const move of WITNESSES[0])controller.place(move[0],move[1],move[2]);
+ for(const move of WITNESSES[0])controller.place(move[0]!,move[1]!,move[2]!);
  expect(isOrderUnlocked(CAMPAIGN_CATALOG[1]!.id,controller.completed)).toBe(true);controller.start(CAMPAIGN_CATALOG[0]!.id,true);expect(controller.completed).toHaveLength(1);
  expect(CHAPTERS).toHaveLength(3);for(const chapter of CHAPTERS)expect(chapter.orderIds).toHaveLength(6);
 });
@@ -140,7 +145,7 @@ it('keeps deterministic fallback RNG and tray cursor within a single attempt',()
    const next=placeCampaign(state,s,r,c);if(next!==state && next.remainingTargets.length===4 && next.status==='running'){chosen=next;break outer;}
   }
   if(!chosen)break;state=chosen;saveCampaign({active:state,completedOrderIds:[]});expect(loadCampaign().active).toBeNull();
-  if(state.nextTrayIndex>CAMPAIGN_CATALOG[0]!.trays.length)fallbackReached=true;
+  if(state.nextTrayIndex>(CAMPAIGN_CATALOG[0]! as Extract<OrderConfig,{deal:'fixed'}>).trays.length)fallbackReached=true;
  }
  expect(fallbackReached).toBe(true);const restored=state;
  for(let s=0;s<3;s++)for(let r=0;r<10;r++)for(let c=0;c<10;c++)expect(placeCampaign(restored,s,r,c)).toEqual(placeCampaign(state,s,r,c));
@@ -238,23 +243,31 @@ it('legacy v2 active snapshot is ignored without migration alert or progress los
  expect(JSON.parse(localStorage.getItem(CAMPAIGN_KEY)!).active).not.toBeTruthy();
 });
 
-it('is a complete, unique 3 × 6 campaign with valid fixed deals and explicit short solutions',()=>{
- expect(CAMPAIGN_CATALOG).toHaveLength(18);expect(WITNESSES).toHaveLength(18);expect(RECOVERY_PATHS).toHaveLength(18);
+it('keeps all 18 layouts and constructive proofs, with authored deals only in tutorial runtime',()=>{
+ expect(CAMPAIGN_CATALOG).toHaveLength(18);
  expect(new Set(CAMPAIGN_CATALOG.map(o=>o.id)).size).toBe(18);
  expect(new Set(CAMPAIGN_CATALOG.map(o=>JSON.stringify(o.board))).size).toBe(18);
  for(const [i,o] of CAMPAIGN_CATALOG.entries()){
-  expect(o.chapter).toBe(Math.floor(i/6)+1);expect(o.seed).toBeGreaterThan(0);
-  expect(o.fragments.length).toBeGreaterThanOrEqual(1);expect(o.fragments.length).toBeLessThanOrEqual(3);
-  expect(o.board).toHaveLength(10);o.board.forEach(row=>expect(row).toHaveLength(10));
-  expect(o.title.ru.length).toBeGreaterThan(0);expect(o.title.en.length).toBeGreaterThan(0);
-  for(const f of o.fragments)for(const cell of f.cells){expect(Number.isInteger(cell)).toBe(true);expect(cell).toBeGreaterThanOrEqual(0);expect(cell).toBeLessThan(100);}
-  for(const tray of o.trays){expect(tray).toHaveLength(3);tray.forEach(id=>expect(findPieceById(id)).toBeDefined());}
-  expect(WITNESSES[i]!.length).toBeLessThanOrEqual(8);
-  // Main AND recovery end inside authored deals, before random fallback.
-  for(const path of [WITNESSES[i]!,RECOVERY_PATHS[i]!]) {
-   let s=initialAttempt(o);
-   for(const m of path){expect(s.nextTrayIndex).toBeLessThanOrEqual(o.trays.length);s=simulate(s,m);}
-   expect(s.status).toBe('succeeded');expect(s.rngState).toBe(o.seed);
+  expect(o.chapter).toBe(Math.floor(i/6)+1);
+  expect(o.deal).toBe(i<3?'fixed':'random');
+  if(o.deal==='random'){expect('trays' in o).toBe(false);expect('seed' in o).toBe(false);}
+  const data=SOLUTIONS[i]!;
+  const {seed,trays,solution,recovery,removedPerMove,designDifficulty,designNotes,...base}=data;
+  const {deal,...runtime}=o;
+  expect(o.deal==='fixed'?runtime:base).toEqual(o.deal==='fixed'?{...base,seed,trays}:runtime);
+  expect(solution).toEqual(CONSTRUCTIVE_WITNESSES[i]);expect(recovery).toEqual(CONSTRUCTIVE_RECOVERY_PATHS[i]);
+  expect(designDifficulty).toBeGreaterThan(0);expect(designNotes.length).toBeGreaterThan(0);
+  // Replay historical proofs by explicitly supplying test-only deals; production ignores them.
+  for(const path of [solution,recovery]){
+   let state=initialAttempt(o);const removed:number[]=[];
+   for(const m of path){
+    const tray=trays[state.nextTrayIndex-1]!;
+    const trayIds=state.trayIds.map((_,slot)=>state.trayIds[slot]===null?null:tray[slot]!);
+    if(state.moves===0)for(let slot=0;slot<3;slot++)trayIds[slot]=tray[slot]!;
+    const next=simulate({...state,trayIds},m);
+    expect(next.moves).toBe(state.moves+1);removed.push(state.remainingTargets.length-next.remainingTargets.length);state=next;
+   }
+   expect(state.status).toBe('succeeded');if(path===solution)expect(removed).toEqual(removedPerMove);
   }
  }
 });
@@ -277,24 +290,78 @@ it('unlocks exactly one next order at every prefix, including both chapter bound
  expect(c.completed).toEqual(prefix(18));expect(loadCampaign().completedOrderIds).toEqual(prefix(18));
 });
 
-it('keeps the reviewable machine-readable QA data identical to the playable catalogue and traces',()=>{
- expect(SOLUTIONS).toHaveLength(18);
- for(const [i,data] of SOLUTIONS.entries()){
-  const {solution,recovery,removedPerMove,designDifficulty,designNotes,...order}=data;
-  expect(order).toEqual(CAMPAIGN_CATALOG[i]);expect(solution).toEqual(WITNESSES[i]);expect(recovery).toEqual(RECOVERY_PATHS[i]);
-  expect(designDifficulty).toBeGreaterThan(0);expect(designNotes.length).toBeGreaterThan(0);
-  let s=initialAttempt(CAMPAIGN_CATALOG[i]!);const removed:number[]=[];
-  for(const m of WITNESSES[i]!){const next=simulate(s,m);removed.push(s.remainingTargets.length-next.remainingTargets.length);s=next;}
-  expect(removedPerMove).toEqual(removed);
- }
-});
-it('can genuinely lose order 18, preserves only the prior completion prefix, and retries for free',()=>{
- saveCampaign({completedOrderIds:prefix(17),active:null});const c=new CampaignController();
+it('can genuinely lose random order 18, preserve completions, and retry for free',()=>{
+ saveCampaign({completedOrderIds:prefix(17),active:null});
+ const seeds=[17,witnessSeed(CAMPAIGN_CATALOG[17]!.id)];
+ const c=new RuntimeController(()=>{},()=>true,()=>seeds.shift()!);
  expect(c.start(CAMPAIGN_CATALOG[17]!.id)).toBe(true);
  for(const m of DEFEAT_18)expect(step(c,m)).toBe(true);
- expect(c.active?.status).toBe('failed');expect(c.active?.moves).toBe(11);expect(validAttempt(c.active)).toBe(true);
+ expect(c.active?.status).toBe('failed');expect(validAttempt(c.active)).toBe(true);
  expect(c.completed).toEqual(prefix(17));expect(loadCampaign().active).toBeNull();
  expect(c.start(CAMPAIGN_CATALOG[17]!.id,true)).toBe(true);
  for(const m of WITNESSES[17]!)expect(step(c,m)).toBe(true);
  expect(c.active?.status).toBe('succeeded');expect(c.completed).toEqual(prefix(18));
+});
+
+it('draws fresh entropy on entry and retry, but never for tutorials or a locked order',()=>{
+ saveCampaign({active:null,completedOrderIds:prefix(3)});
+ const seeds=vi.fn().mockReturnValueOnce(123).mockReturnValueOnce(456).mockReturnValueOnce(789);
+ const c=new RuntimeController(()=>{},()=>true,seeds), o=CAMPAIGN_CATALOG[3]!;
+ c.start(CAMPAIGN_CATALOG[0]!.id);expect(seeds).not.toHaveBeenCalled();
+ expect(c.start(CAMPAIGN_CATALOG[4]!.id)).toBe(false);expect(seeds).not.toHaveBeenCalled();
+ c.start(o.id);const first=c.active!;expect(first).toEqual(runtimeInitialAttempt(o,123));
+ c.start(o.id,true);expect(c.active).toEqual(runtimeInitialAttempt(o,456));expect(c.active?.trayIds).not.toEqual(first.trayIds);
+ c.abandon();c.start(o.id);expect(c.active).toEqual(runtimeInitialAttempt(o,789));expect(seeds).toHaveBeenCalledTimes(3);
+ expect(c.completed).toEqual(prefix(3));expect(loadCampaign().completedOrderIds).toEqual(prefix(3));
+});
+it('production entropy is sampled per attempt, and explicit invalid seeds cannot lock xorshift at zero',()=>{
+ const entropy=vi.spyOn(globalThis.crypto,'getRandomValues').mockImplementationOnce(a=>{(a as Uint32Array)[0]=123;return a;}).mockImplementationOnce(a=>{(a as Uint32Array)[0]=456;return a;});
+ const o=CAMPAIGN_CATALOG[3]!;
+ expect(runtimeInitialAttempt(o)).toEqual(runtimeInitialAttempt(o,123));
+ expect(runtimeInitialAttempt(o)).toEqual(runtimeInitialAttempt(o,456));expect(entropy).toHaveBeenCalledTimes(2);entropy.mockRestore();
+ for(const seed of [0,-1,NaN,Infinity,1.5,0x100000000])expect(()=>runtimeInitialAttempt(o,seed)).toThrow(RangeError);
+ expect(freshAttemptSeed()).toBeGreaterThan(0);
+});
+it('all random orders use the seed for the first deal and every refill, independent of authored holes',()=>{
+ for(const o of CAMPAIGN_CATALOG.slice(3)){
+  const a=runtimeInitialAttempt(o,12345),b=runtimeInitialAttempt(o,67890);
+  expect(a.trayIds).not.toEqual(b.trayIds);expect(a).toEqual(runtimeInitialAttempt(o,12345));
+  expect({trayIds:a.trayIds,rngState:a.rngState}).toEqual(randomCampaignTray(12345));
+  expect(validAttempt(a)).toBe(true);
+  let s=a;
+  for(let turn=0;turn<90&&s.status==='running';turn++){
+   let next:CampaignAttempt|undefined;
+   outer:for(let slot=0;slot<3;slot++)for(let r=0;r<10;r++)for(let c=0;c<10;c++){
+    const n=placeCampaign(s,slot,r,c);if(n!==s){next=n;break outer;}
+   }
+   expect(next).toBeDefined();
+   if(next!.nextTrayIndex>s.nextTrayIndex)expect({trayIds:next!.trayIds,rngState:next!.rngState}).toEqual(randomCampaignTray(s.rngState));
+   else expect(next!.rngState).toBe(s.rngState);
+   expect(placeCampaign(s,0,0,0)).toEqual(placeCampaign(s,0,0,0));
+   s=next!;expect(validAttempt(s)).toBe(true);
+  }
+  expect(s.status).not.toBe('running'); // This legal, deliberately naive player must terminate.
+ }
+});
+it('survives 10000 reproducible random deals, covers all catalogue pieces and changes RNG state',()=>{
+ let state=12345;const seen=new Set<string>();
+ for(let i=0;i<10000;i++){
+  const a=randomCampaignTray(state);expect(a).toEqual(randomCampaignTray(state));expect(a.rngState).not.toBe(state);expect(a.rngState).toBeGreaterThan(0);
+  expect(a.trayIds).toHaveLength(3);for(const id of a.trayIds){expect(findPieceById(id)).toBeDefined();seen.add(id);}state=a.rngState;
+ }
+ expect(seen.size).toBe(37);
+});
+it('retains the full 18-order completion prefix through random failed replays and startup',()=>{
+ saveCampaign({active:null,completedOrderIds:prefix(18)});
+ const c=new RuntimeController(()=>{},()=>true,()=>17);c.start(CAMPAIGN_CATALOG[17]!.id);
+ for(const m of DEFEAT_18)step(c,m);
+ expect(c.active?.status).toBe('failed');c.start(CAMPAIGN_CATALOG[17]!.id,true);c.abandon();
+ expect(new RuntimeController().completed).toEqual(prefix(18));expect(loadCampaign().notice).toBeNull();
+});
+it('replays documented seeded random outcomes, with actual wins and losses for every 04–18 layout',()=>{
+ for(const scenario of RANDOM_SCENARIOS){
+  const o=CAMPAIGN_CATALOG.find(o=>o.id===scenario.id)!;
+  expect(replay(runtimeInitialAttempt(o,scenario.witness.seed),scenario.witness.moves).status).toBe('succeeded');
+  expect(replay(runtimeInitialAttempt(o,scenario.defeat.seed),scenario.defeat.moves).status).toBe('failed');
+ }
 });

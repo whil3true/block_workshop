@@ -26,7 +26,7 @@ export function validAttempt(v: unknown): v is CampaignAttempt {
  const used = a.trayIds.filter(id => id === null).length;
  if (used !== a.moves % 3 && !(a.status === 'succeeded' && used === 3 && a.moves % 3 === 0)) return false;
  if (a.nextTrayIndex !== 1 + Math.floor((a.moves - used) / 3)) return false;
- if (a.moves === 0 && (a.remainingTargets.length !== original.length || JSON.stringify(a.board) !== JSON.stringify(order.board) || JSON.stringify(a.trayIds) !== JSON.stringify(order.trays[0]) || a.rngState !== order.seed || a.score !== 0 || a.streak !== 0)) return false;
+ if (a.moves === 0 && (a.remainingTargets.length !== original.length || JSON.stringify(a.board) !== JSON.stringify(order.board) || (order.deal === 'fixed' && (JSON.stringify(a.trayIds) !== JSON.stringify(order.trays[0]) || a.rngState !== order.seed)) || a.score !== 0 || a.streak !== 0)) return false;
  const fits = hasAnyLegalPlacement(a.board, a.trayIds.map(id => id ? findPieceById(id) ?? null : null));
  return a.status === 'succeeded' ? a.remainingTargets.length === 0 && a.moves > 0
   : a.remainingTargets.length > 0 && (a.status === 'running' ? fits : a.status === 'failed' && !fits);
