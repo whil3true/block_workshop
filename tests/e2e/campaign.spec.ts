@@ -446,8 +446,8 @@ for(const locale of ['ru','en'])for(const width of [320,360,393]) {
   const saved=await snapshot(page);
   await click(page,240,412);
   const initial=await page.screenshot();
-  // Removed controls must have no hidden interactive zone, even with all orders completed.
-  for(const [x,y]of [[49,45],[154,650],[326,650]])await click(page,x!,y!);
+  // Check the empty footer below the rebalanced cards (which now extend to y=667).
+  for(const [x,y]of [[49,45],[154,680],[326,680]])await click(page,x!,y!);
   expect((await page.screenshot()).equals(initial)).toBe(true);
   for(let chapter=1;chapter<=6;chapter++){
    await click(page,60+(chapter-1)*72,174);
