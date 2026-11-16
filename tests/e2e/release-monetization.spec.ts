@@ -38,7 +38,7 @@ test('time spent in menu, settings and orders never creates an automatic ad',asy
  await click(page,240,412);await advance(page,200000);await click(page,240,297);await advance(page,200000);
  await drag(page,0,8,4);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(0);
  await click(page,49,45);await click(page,240,450);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(0); // Stay.
- await page.keyboard.press('Escape');await click(page,240,518);await expect.poll(()=>page.evaluate(()=>window.qaSdk.requests)).toBe(1);
+ await page.keyboard.press('Escape');await frames(page);await click(page,240,518);await expect.poll(()=>page.evaluate(()=>window.qaSdk.requests)).toBe(1);
  await close(page,false);await click(page,240,756);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(1);
  await click(page,240,580);await drag(page,0,0,0);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(1);
 });
