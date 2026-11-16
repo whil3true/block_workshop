@@ -248,7 +248,7 @@ test('no warning before the first move; bottom Orders button confirms after a mo
 test('Esc exit confirmation can be cancelled without restarting the unfinished order',async({page})=>{
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,128,278);
  await drag(page,0,8,4);
- await page.keyboard.press('Escape'); // Open the exit warning.
+ await page.keyboard.press('Escape');await frames(page); // Render the exit warning before sending the next key.
  await page.keyboard.press('Escape'); // Dismiss warning and keep the active order.
  await frames(page);
  // Remaining solution moves must still complete the SAME attempt.
