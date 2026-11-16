@@ -198,7 +198,8 @@ export class WorkshopScene extends Phaser.Scene {
   CHAPTERS.forEach((entry,i) => {
    const x = [86,252,399][i]!;
    if (entry.orderIds.length) {
-    this.surface('chapter-tab',x,174,120,50,entry.number === this.chapter ? 0x9cab86 : 0xefe4d6);this.text(x,174,`${entry.number} / 3`,'body');
+    this.root.add(this.add.container(0,0,[paperSurface(this,'chapter-tab',x,174,120,50,0x9cab86)]).setAlpha(entry.number === this.chapter ? 1 : .58));
+    this.text(x,174,`${entry.number} / 3`,'body',0,entry.number === this.chapter ? '#30452D' : '#7A6A60');
     this.zone(`chapter-${entry.number}`,x,174,120,60,() => {this.chapter=entry.number;this.invalidate();});
    }
   });
