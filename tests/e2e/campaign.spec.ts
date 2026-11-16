@@ -272,7 +272,7 @@ test('Esc exit confirmation can be cancelled without restarting the unfinished o
 test('Esc confirms unfinished campaign exit to main menu and re-entry starts fresh',async({page})=>{
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await click(page,240,278);
  await drag(page,0,8,4);
- await page.keyboard.press('Escape'); // Open exit warning.
+ await page.keyboard.press('Escape');await frames(page); // Wait for the warning's real Canvas hit areas before confirming.
  await click(page,240,518); // Confirm exit to menu.
  await click(page,240,412);await click(page,240,278);
  // A fresh attempt must accept the complete original solution.

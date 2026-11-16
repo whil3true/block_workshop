@@ -63,3 +63,5 @@ Local renderer probe confirms ANGLE / Vulkan SwiftShader software WebGL with rea
 Reviewed mobile evidence: [RU 320px](evidence/journal-navigation/journal-ru-320-chapter-1.webp), [EN 320px](evidence/journal-navigation/journal-en-320-chapter-1.webp). Final-chapter, other-width, landscape and desktop captures are included in the accompanying QA archive.
 
 The six Android user-agent/touch navigation checks pass in 18.1s locally. The updated first-three-orders journey passes in 24.7s after replacing its obsolete journal-arrow click with the new bottom Back button.
+
+The first complete matrix exposed two WebKit retry-only passes: a click immediately after Escape could precede creation of the warning's Canvas zones, and Classic's reload journey used two frames without waiting for async startup readiness. Both tests now wait for their real preconditions (rendered warning / `aria-busy=false`), preserving all actions and assertions without sleeps or larger timeouts.

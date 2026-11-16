@@ -9,7 +9,7 @@ test('Canvas placement, continued board, live RU/EN, volume settings and confirm
  await expect.poll(async()=>(await snapshot(page)).score).toBe(1);
  await page.screenshot({path:info.outputPath('mobile-gameplay.png')});
  await click(page,49,45);await click(page,240,565);expect((await snapshot(page)).score).toBe(1);
- await page.reload();await frames(page);await frames(page);await click(page,240,565);expect((await snapshot(page)).board[0]![0]).toBe('single');
+ await page.reload();await expect(page.locator('canvas')).toHaveAttribute('aria-busy','false');await frames(page);await frames(page);await click(page,240,565);expect((await snapshot(page)).board[0]![0]).toBe('single');
  await click(page,431,45);await click(page,150,230);await expect(page.locator('html')).toHaveAttribute('lang','ru');
  await click(page,80,338);await click(page,400,438);
  const settings=await page.evaluate(()=>localStorage.getItem('block-workshop:audio-settings'));
@@ -19,7 +19,7 @@ test('Canvas placement, continued board, live RU/EN, volume settings and confirm
  await click(page,130,759);await click(page,240,518);expect((await snapshot(page)).score).toBe(2);
  await click(page,130,759);await click(page,240,450);
  await expect.poll(async()=>(await snapshot(page)).score).toBe(0);
- await page.reload();await frames(page);await frames(page);await expect(page.locator('html')).toHaveAttribute('lang','ru');
+ await page.reload();await expect(page.locator('canvas')).toHaveAttribute('aria-busy','false');await frames(page);await frames(page);await expect(page.locator('html')).toHaveAttribute('lang','ru');
  expect(errors).toEqual([]);
 });
 test('settings from menu, invalid edge drop, empty slots and fresh three-piece refill',async({page})=>{
