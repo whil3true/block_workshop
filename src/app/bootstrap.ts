@@ -14,6 +14,7 @@ import { attachBrowserGameplayLifecycle } from './BrowserGameplayLifecycle';
 import { LocaleRuntime } from './LocaleRuntime';
 import { PauseGate } from './PauseGate';
 import { shouldSuspendAudio } from './AudioPausePolicy';
+import { showNavigationCover, hideNavigationCover, armNavigationCoverFallback } from '../platform/NavigationCover';
 import { SdkInputGuard } from '../platform/SdkInputGuard';
 import { AdFlow } from './AdFlow';
 import { WorkshopScene } from '../phaser/WorkshopScene';
@@ -51,7 +52,8 @@ export function mountApplication(platform: PlatformService, inputGuard = new Sdk
  const campaign = new CampaignController(() => scene?.invalidate(), () => !gate.paused);
  const interstitial = new InterstitialController(platform);
  const flow = new AdFlow<TrayOffer>({ gate, platform, interstitial,
-  cover: visible => scene?.setCover(visible), afterFrame,
+  cover: visible => { if (visible) showNavigationCover(); else hideNavigationCover(); scene?.setCover(visible); },
+  afterFrame: async () => { armNavigationCoverFallback(); await afterFrame(); },
   restart: () => model.commitRestart(), applyReward: offer => model.commitReward(offer) });
  const density = selectStartupRenderScale(computeRenderScale(window.devicePixelRatio || 1, window.innerWidth, window.innerHeight), isDesktopBrowserUserAgent(navigator.userAgent, navigator.maxTouchPoints));
  scene = new WorkshopScene({ model, campaign, gate, locale, manager, audio, platform, flow, interstitial, density });
@@ -84,7 +86,7 @@ export function mountApplication(platform: PlatformService, inputGuard = new Sdk
  };
  game.events.on(Phaser.Core.Events.POST_RENDER, onRender);
  const destroy = (): void => {
-  flow.dispose(); platform.setGameplayActive(false); manager.dispose(); configureAudioRuntime(null);
+  hideNavigationCover(); flow.dispose(); platform.setGameplayActive(false); manager.dispose(); configureAudioRuntime(null);
   detachInput(); inputGuard.dispose(); window.removeEventListener('blur', blur); window.removeEventListener('focus', focus);
   detachGate(); detachLocale(); detachAudio(); detachBrowser(); detachSdkPause(); detachSdkResume();
   game.events.off(Phaser.Core.Events.POST_RENDER, onRender);

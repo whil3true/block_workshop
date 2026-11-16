@@ -201,7 +201,11 @@ export class WorkshopScene extends Phaser.Scene {
   else this.drawPlay();
   if (this.modal) this.drawModal();
   if (this.noticeUntil > 0) this.text(240,617,this.services.locale.t('rewardUnavailable'),'caption',410);
-  if (this.cover || this.externalBlock()) { this.overlay(); this.text(240,400,this.services.locale.t(this.ready ? 'paused' : 'loading'),'screenTitle'); }
+  // Plain window blur cancels the held figure and freezes gameplay without
+  // replacing its restored visual state (browser chrome can take focus).
+  const gate = this.services.gate;
+  const focusOnly = gate.has('focus') && !gate.has('sdk') && !gate.has('browser') && !gate.has('ad') && !gate.has('transition');
+  if (this.cover || (this.externalBlock() && !focusOnly)) { this.overlay(); this.text(240,400,this.services.locale.t(this.ready ? 'paused' : 'loading'),'screenTitle'); }
   this.effects.setVisible(this.backdrop === null);
   this.services.platform.setGameplayActive(this.screen === 'play' && !this.terminal && !this.services.gate.paused && !this.modal && !this.services.flow.busy && this.ready);
  }

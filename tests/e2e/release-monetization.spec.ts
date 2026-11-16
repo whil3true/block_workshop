@@ -109,3 +109,25 @@ for(const locale of ['ru','en']) for(const width of [320,360,393]) {
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
  });
 }
+
+test('native Android-style held touch cannot cross startup ad into a menu action',async({page,browserName})=>{
+ test.skip(browserName!=='chromium','Native touch via Chromium CDP');
+ const client=await page.context().newCDPSession(page);
+ await client.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
+ await sdk(page,true);
+ const menu=await point(page,240,580);
+ await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:menu.x,y:menu.y}]});
+ await page.evaluate(()=>window.qaSdk.emit('game_api_resume'));await settled(page);
+ expect(await page.evaluate(()=>window.qaSdk.ready)).toBe(0);
+ await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settled(page);
+ await expect.poll(()=>page.evaluate(()=>window.qaSdk.ready)).toBe(1);
+ expect(await page.evaluate(()=>window.qaSdk.starts)).toBe(0);
+ await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[menu]});
+ await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settled(page);
+ expect(await page.evaluate(()=>window.qaSdk.starts)).toBe(1);
+ const from=await point(page,90,670),to=await point(page,42,218);
+ await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[from]});
+ await client.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[to]});
+ await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await settled(page);
+ expect((await snapshot(page)).score).toBe(1);expect(await page.evaluate(()=>window.qaSdk.requests)).toBe(0);
+});

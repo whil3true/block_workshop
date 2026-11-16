@@ -71,9 +71,12 @@ immediately. There is one clock, no setInterval and no recurring scheduled ad ca
 SdkInputGuard attaches before SDK/font loading. It captures pointer/touch/mouse/keyboard events,
 tracks simultaneous holds, consumes their release/click, and admits fresh input after two render
 frames once all external owners release. Disposal invalidates outstanding releases.
-All ordinary UI, Splash and navigation covering remain inside the existing Canvas. The Canvas
-continues rendering independent of its paused gameplay clocks, so destinations can be drawn
-while SDK pause remains held. No second DOM gameplay interface is introduced.
+All ordinary UI and Splash remain inside the existing Canvas. A technical opaque DOM navigation
+shield, adapted from Cozy Gallery, protects the old frame even if the renderer is suspended by the
+browser. It appears only on real onOpen, is released after destination render frames, and arms its
+10-second failsafe only after the ad settles and navigation commits. It has no text/buttons.
+Plain window blur preserves the restored source-figure appearance while independently freezing
+input, clocks and gameplay marking. SDK/browser/ad pauses still receive the normal pause cover.
 
 ## Startup
 
@@ -139,7 +142,12 @@ The existing dev-only Pages deploy job and optimized Chromium sharding are prese
 
 ## Validation
 
-Automated validation is pending the PR CI run. Required command is npm run check under Node 22;
+Initial CI run [43973577124](https://github.com/whil3true/block_workshop/actions/runs/43973577124):
+Node 22 npm run check PASS, 630 unit tests PASS, production build/dist checks PASS.
+Firefox: all new monetization/startup cases passed; two unchanged blur appearance regressions failed
+and are corrected in the follow-up. Chromium shard 2 passed. Final rerun required for the follow-up.
+
+Required command is npm run check under Node 22;
 existing CI then runs production E2E in Chromium (4 shards), Firefox and WebKit.
 The local executor was unavailable, so no local test/build/browser execution is claimed.
 
@@ -151,6 +159,8 @@ Added coverage:
 - Browser mock SDK: active-time/drop boundary, pause exclusion, no-fill retry, exit preservation,
   deferred new game, real campaign completions across chapter boundary/final result,
   reward completion/error/once-only and startup held mouse events.
+- Native Chromium CDP held touch across startup advertisement, followed by actual touch placement.
+- Technical navigation shield lifetime across long ads, post-navigation fallback and cleanup.
 - Startup / menu / Classic screenshots for RU/EN at 320, 360 and 393 CSS px in CI artifacts.
 - Existing production browser suites retain portrait/landscape/desktop, real touch (Chromium CDP),
   pagehide/pageshow, settings persistence, all campaign solutions and Pages subpath checks.
@@ -169,6 +179,8 @@ These are viewport emulations, not proof of physical Android operation.
 7. Repeated onOpen could repeat a cover callback / extend the watchdog; now idempotent.
 8. Rewarded error/watchdog could return a previously granted flag; now rejects incomplete transactions.
 9. Rewarded opening did not postpone the next fullscreen; now shares the cooldown.
+10. Canvas-only covering could miss a frame while browser rendering was suspended; added a technical navigation shield.
+11. First Firefox regression run detected a blur-only overlay covering the restored figure; preserve its original appearance while focus remains a separate pause owner.
 
 ## Manual checklist in a real Yandex draft
 
@@ -187,6 +199,20 @@ These are viewport emulations, not proof of physical Android operation.
 - Reload after placement, reward, exit and each completion: Classic, record, settings, RU/EN and completed orders preserved.
 - Inspect actual SDK console and GameplayAPI marks; verify mobile fullscreen/no context menu/media-session player.
 - Confirm viewport screenshots on physical Android; desktop engine emulation cannot certify hardware behavior.
+
+## Requirements checked
+
+| Requirement | Evidence / limit |
+| --- | --- |
+| 1.1, 1.7, 1.19.1 | Official relative /sdk.js, bounded init; no SDK source URL baked into archive |
+| 1.3, 4.7 | Independent external pause/audio gates; unit/mock-browser tests; real audio QA pending |
+| 1.6, 1.8, 1.10 | Existing resize/touch/viewport suites + RU/EN 320/360/393 screens; physical Android/fullscreen pending |
+| 1.9, 4.2 | Per-action local saves, completions, delayed reset; draft reload/ad-click checks pending |
+| 1.19.2–4 | Rendered-menu readiness, active-only gameplay marks, independent SDK lifecycle |
+| 1.14, 1.20 | Existing production suites in three browser engines; final rerun pending |
+| 2.14 | Existing saved language → SDK locale → fallback precedence preserved |
+| 4.1, 4.4–6 | Official formats only, action boundaries, voluntary rewarded, no custom advertisements |
+| 1.11, 1.15, 5.2 | Console configuration/final storefront metadata and real-draft review are publication tasks |
 
 ## Remaining blockers
 

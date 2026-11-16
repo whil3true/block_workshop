@@ -8,3 +8,7 @@ body { --safe-top: env(safe-area-inset-top, 0px); --safe-right: env(safe-area-in
 #app { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
 canvas { display: block; touch-action: none; }
 #app[data-error] { color: #4E4038; display: grid; place-content: center; padding: 24px; }
+
+/* Technical navigation shield, not a second game UI. Survives suspended Canvas rendering. */
+#navigation-cover { position: absolute; inset: 0; z-index: 100; background: #F6EFE6; touch-action: none; }
+#navigation-cover[hidden] { display: none; }

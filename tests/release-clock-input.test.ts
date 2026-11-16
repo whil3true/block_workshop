@@ -56,3 +56,18 @@ describe('SDK input quarantine', () => {
   }finally{guard.dispose();}
  });
 });
+
+describe('navigation shield',()=>{
+ it('survives a long advertisement and starts its failsafe only after navigation',async()=>{
+  vi.useFakeTimers();
+  const {showNavigationCover,hideNavigationCover,armNavigationCoverFallback}=await import('../src/platform/NavigationCover');
+  document.body.innerHTML='<main id="app"></main>';
+  try{
+   showNavigationCover();await vi.advanceTimersByTimeAsync(120000);
+   expect(document.getElementById('navigation-cover')!.hidden).toBe(false);
+   armNavigationCoverFallback();await vi.advanceTimersByTimeAsync(9999);expect(document.getElementById('navigation-cover')!.hidden).toBe(false);
+   hideNavigationCover();await vi.advanceTimersByTimeAsync(1);expect(document.getElementById('navigation-cover')!.hidden).toBe(true);
+   showNavigationCover();armNavigationCoverFallback();await vi.advanceTimersByTimeAsync(10000);expect(document.getElementById('navigation-cover')!.hidden).toBe(true);
+  }finally{hideNavigationCover();document.body.innerHTML='';vi.useRealTimers();}
+ });
+});
