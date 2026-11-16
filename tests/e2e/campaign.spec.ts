@@ -349,18 +349,42 @@ for(const locale of ['ru','en'])for(const width of [320,360,393]) {
 }
 
 
-test('real crowded order 18 reaches defeat and its free retry can complete the collection',async({page},info)=>{
+// Keep the full original crowding path, but give defeat/navigation its own budget.
+test('real crowded order 18 reaches defeat and returns to chapter 6',async({page},info)=>{
  await seedAchievements(page,CAMPAIGN_CATALOG.slice(0,17).map(o=>o.id));
  await seed(page,{locale:'en'});await open(page);await click(page,240,412);await selectOrder(page,17);
- await campaignSeed(page,[17,witnessSeed(CAMPAIGN_CATALOG[17]!.id)]);
- await click(page,130,759);await click(page,240,450);
+ await campaignSeed(page,[17]);await click(page,130,759);await click(page,240,450);
  await complete(page,DEFEAT_18);
  expect((await campaign(page))?.completedOrderIds).toHaveLength(17);
  await page.screenshot({path:info.outputPath('order-18-real-defeat.png')});
+ await click(page,240,480);
+ await page.screenshot({path:info.outputPath('order-18-defeat-chapter-6.png')});
+ await campaignSeed(page,[witnessSeed(CAMPAIGN_CATALOG[17]!.id)]);
+ await click(page,240,548); // Chapter 6's third card is still order 18.
+ const before=await boardPixels(page);await dragMove(page,WITNESSES[17]![0]!);
+ expect((await boardPixels(page)).equals(before)).toBe(false);
+});
+
+// A second, independently generated real defeat reaches the same terminal UI in
+// five moves. The complete retry -> victory journey retains real Canvas drags.
+test('order 18 free retry after real defeat completes the collection',async({page},info)=>{
+ const prefix=CAMPAIGN_CATALOG.slice(0,17).map(o=>o.id);
+ await seedAchievements(page,prefix);await seed(page,{locale:'en'});await open(page);await click(page,240,412);
+ await click(page,420,174);await campaignSeed(page,[2710938419,witnessSeed(CAMPAIGN_CATALOG[17]!.id)]);
+ await click(page,240,548);
+ await complete(page,[[0,0,3],[1,2,2],[2,3,0],[0,3,5],[2,5,3]]);
+ expect((await campaign(page))?.completedOrderIds).toEqual(prefix);
  await click(page,240,553); // Existing free result retry; no ad or confirmation.
  await complete(page,WITNESSES[17]!);
- expect((await campaign(page))?.completedOrderIds).toHaveLength(18);
+ expect((await campaign(page))?.completedOrderIds).toEqual(CAMPAIGN_CATALOG.map(o=>o.id));
  await page.screenshot({path:info.outputPath('order-18-after-defeat-retry.png')});
+});
+
+test('final completed order remains freely replayable from chapter 6',async({page})=>{
+ await seedAchievements(page,CAMPAIGN_CATALOG.map(o=>o.id));await seed(page,{locale:'en'});
+ await open(page);await click(page,240,412);await selectOrder(page,17);
+ await complete(page,WITNESSES[17]!);
+ expect((await campaign(page))?.completedOrderIds).toHaveLength(18);
 });
 
 test('random opening changes on retry and reentry, while journal returns to the selected chapter',async({page},info)=>{
