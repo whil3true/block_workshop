@@ -21,16 +21,19 @@ import { WorkshopScene } from '../phaser/WorkshopScene';
 import { computeRenderScale, selectStartupRenderScale, isDesktopBrowserUserAgent, LOGICAL_GAME_WIDTH, LOGICAL_GAME_HEIGHT } from '../phaser/Display';
 
 export const afterFrame = (): Promise<void> => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+// One release frame consumes the old pointerup/click. Rebuilt hit areas enter
+// Phaser's input list on the following frame, alongside their first visible render.
+const afterInputFrame = (): Promise<void> => new Promise(resolve => requestAnimationFrame(() => resolve()));
 export async function boot(platformFactory = createPlatform) {
  // Initialize SDK and retain startup events before constructing Phaser/audio.
- const inputGuard = new SdkInputGuard(afterFrame);
+ const inputGuard = new SdkInputGuard(afterInputFrame);
  try {
   const platform = await platformFactory();
   await document.fonts.load('700 24px Nunito').catch(() => {});
   return mountApplication(platform, inputGuard);
  } catch (error) { inputGuard.dispose(); throw error; }
 }
-export function mountApplication(platform: PlatformService, inputGuard = new SdkInputGuard(afterFrame)) {
+export function mountApplication(platform: PlatformService, inputGuard = new SdkInputGuard(afterInputFrame)) {
  const gate = new PauseGate(); gate.set('startup', true); gate.set('sdk', platform.isPaused);
  let scene: WorkshopScene | undefined;
  const detachSdkPause = platform.onPause(() => gate.set('sdk', true));

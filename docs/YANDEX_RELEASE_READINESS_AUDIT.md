@@ -72,8 +72,9 @@ The active Classic clock is sampled using a monotonic clock, with pause boundari
 immediately. There is one clock, no setInterval and no recurring scheduled ad callback.
 
 SdkInputGuard attaches before SDK/font loading. It captures pointer/touch/mouse/keyboard events,
-tracks simultaneous holds, consumes their release/click, and admits fresh input after two render
-frames once all external owners release. Disposal invalidates outstanding releases.
+tracks simultaneous holds, consumes their release/click, and admits fresh input after a release
+frame once all external owners release. Enabled hit areas register on the following Phaser frame,
+alongside their visible UI render. Navigation covering retains its separate two-frame fence. Disposal invalidates outstanding releases.
 All ordinary UI and Splash remain inside the existing Canvas. A technical opaque DOM navigation
 shield, adapted from Cozy Gallery, protects the old frame even if the renderer is suspended by the
 browser. It appears only on real onOpen, is released after destination render frames, and arms its
@@ -210,7 +211,7 @@ These are viewport emulations, not proof of physical Android operation.
 9. Rewarded opening did not postpone the next fullscreen; now shares the cooldown.
 10. Canvas-only covering could miss a frame while browser rendering was suspended; added a technical navigation shield.
 11. A blur-only pause overlay covered restored figures; preserve the original appearance with focus as an independent pause owner.
-12. Fresh input could precede rebuilding enabled hit areas after release; synchronously refresh at the end of the external release transaction.
+12. Fresh input could precede rebuilding/registration of enabled hit areas after release; refresh synchronously and align the input-release fence with Phaser's following-frame registration.
 13. Completed-order journal cards also represent replay; route them through the same controller without adding ads to first-time selection or chapter navigation.
 
 ## Manual checklist in a real Yandex draft
