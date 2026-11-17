@@ -11,7 +11,7 @@ export interface PlatformService {
   /** Resolves true only when a fullscreen interstitial was actually shown. */
   showInterstitial(onOpen?: () => void): Promise<boolean>;
   /** True only when the video explicitly granted its reward. */
-  showRewarded(): Promise<boolean>;
+  showRewarded(onOpen?: () => void): Promise<boolean>;
   onPause(handler: () => void): () => void;
   onResume(handler: () => void): () => void;
 }

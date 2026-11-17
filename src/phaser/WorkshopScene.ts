@@ -18,12 +18,14 @@ import { createPrimaryButton, createSecondaryButton, createUiText, createViewpor
 import { createAudioVolumeSlider } from './AudioVolumeSlider';
 import { BOARD, TRAY, PIECE_COLORS, TILE_MATERIAL, boardAnchor } from './BoardGeometry';
 import { preloadCozyAssets, paperSurface, syncViewportPaper } from './CozyAssets';
+import { ClassicAdClock } from '../app/ClassicAdClock';
+import type { InterstitialController } from '../platform/InterstitialController';
 import { VISUAL_COLORS } from './VisualTokens';
 
 type Modal = 'settings' | 'restart' | 'reward' | 'goal' | 'campaignNotice' | 'leaveOrder' | null;
 export interface SceneServices {
  model: ModelApi; campaign: CampaignController; gate: PauseGate; locale: LocaleRuntime; manager: AudioManager; audio: AudioApi;
- platform: PlatformService; flow: AdFlow<TrayOffer>; density: number;
+ platform: PlatformService; flow: AdFlow<TrayOffer>; interstitial: InterstitialController; density: number;
 }
 interface ActiveDrag { pointerId: number; slot: number; piece: Piece; lift: number; x: number; y: number; }
 /** Screens share exactly one SDK, audio owner, PauseGate and ad transaction controller. */
@@ -36,7 +38,10 @@ export class WorkshopScene extends Phaser.Scene {
  private effects!: Phaser.GameObjects.Container;
  private dirty = true;
  private disposed = false;
- private screen: 'menu' | 'journal' | 'play' = 'menu';
+ private screen: 'splash' | 'menu' | 'journal' | 'play' = 'splash';
+ private readonly classicClock = new ClassicAdClock();
+ private clockSession = 0;
+ private adRevision = 0;
  private mode: 'classic' | 'campaign' = 'classic';
  private chapter = 1;
  private modal: Modal = null;
@@ -53,7 +58,7 @@ export class WorkshopScene extends Phaser.Scene {
  preload(): void { preloadCozyAssets(this); }
  create(): void {
   this.disposed = false;
-  this.events.once(Phaser.Scenes.Events.DESTROY, () => { this.disposed = true; });
+  this.events.once(Phaser.Scenes.Events.DESTROY, () => { this.disposed = true; this.classicClock.dispose(); });
   this.game.canvas.setAttribute('aria-busy','true');
   this.game.canvas.setAttribute('aria-label',this.services.locale.t('title'));
   configureLogicalCamera(this, this.services.density);
@@ -81,7 +86,7 @@ export class WorkshopScene extends Phaser.Scene {
   const resize = (): void => { this.cancelDrag(); this.invalidate(); };
   this.scale.on(Phaser.Scale.Events.RESIZE, resize);
   this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-   this.disposed = true;
+   this.disposed = true; this.classicClock.dispose();
    this.game.canvas.removeEventListener('pointercancel', cancel);
    window.removeEventListener('blur', cancel);
    this.scale.off(Phaser.Scale.Events.RESIZE, resize);
@@ -89,11 +94,46 @@ export class WorkshopScene extends Phaser.Scene {
   this.draw();
  }
  invalidate(): void { this.dirty = true; }
- setReady(): void { this.game.canvas.setAttribute('aria-busy','false'); this.ready = true; this.invalidate(); }
+ /** Release callbacks run after render frames, outside Phaser's input dispatch.
+  * Rebuild hit areas synchronously so a fresh press cannot hit stale disabled UI. */
+ refreshAfterExternalRelease(): void {
+  if (!this.disposed && this.root && this.scene.isActive()) this.draw();
+ }
+ setReady(): void {
+  if (this.ready || this.disposed) return;
+  this.screen = 'menu'; this.ready = true;
+  this.game.canvas.setAttribute('aria-busy','false'); this.invalidate();
+ }
  setCover(visible: boolean): void { this.cover = visible; this.invalidate(); }
  showCombo(streak: number): void { this.combo = streak; this.comboRemaining = 900; this.invalidate(); }
- onPauseChange(): void { if (this.services.gate.paused) this.cancelDrag(); this.invalidate(); }
+ onPauseChange(): void {
+  if (this.services.gate.paused) this.cancelDrag();
+  if (this.tweens) { if (this.services.gate.paused) this.tweens.pauseAll(); else this.tweens.resumeAll(); }
+  if (this.time) this.time.paused = this.services.gate.paused;
+  this.syncClassicClock(); this.invalidate();
+ }
+ private syncClassicClock(): void {
+  const { model, interstitial } = this.services;
+  if (model.session !== this.clockSession || interstitial.shownRevision !== this.adRevision) {
+   this.clockSession = model.session; this.adRevision = interstitial.shownRevision; this.classicClock.reset();
+  }
+  this.classicClock.setActive(this.ready && this.screen === 'play' && this.mode === 'classic'
+   && !this.terminal && !this.modal && !this.services.gate.paused && !this.services.flow.busy);
+ }
+ private tryClassicIntermission(): boolean {
+  this.syncClassicClock();
+  if (this.disposed || this.screen !== 'play' || this.mode !== 'classic' || this.terminal || this.drag
+   || this.modal || this.externalBlock() || this.services.flow.busy || !this.classicClock.due || !this.services.interstitial.eligible) return false;
+  // This is a completed drop, never a timer callback. Remove only cosmetic flashes.
+  this.effects.removeAll(true);
+  void this.services.flow.intermission().then(shown => {
+   if (this.disposed) return;
+   this.classicClock.attemptFinished(shown); this.syncClassicClock(); this.invalidate();
+  });
+  return true;
+ }
  update(_time: number, delta: number): void {
+  this.syncClassicClock();
   if (this.comboRemaining > 0 && !this.services.gate.paused) {
    this.comboRemaining -= delta; if (this.comboRemaining <= 0) this.invalidate();
   }
@@ -102,7 +142,7 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private externalBlock(): boolean {
   const gate = this.services.gate;
-  return !this.ready || gate.has('sdk') || gate.has('browser') || gate.has('ad') || gate.has('transition');
+  return !this.ready || gate.has('sdk') || gate.has('browser') || gate.has('ad') || gate.has('transition') || gate.has('input') || gate.has('focus');
  }
  private get board(): BoardState { return this.mode === 'campaign' ? this.services.campaign.active!.board : this.services.model.boardState; }
  private get pieces(): readonly (Piece | null)[] {
@@ -158,14 +198,28 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private draw(): void {
   this.dirty = false; this.root.removeAll(true); this.backdrop = null; this.trayFigures = [];
+  if (this.screen === 'splash' || (this.screen === 'menu' && this.externalBlock())) {
+   this.drawSplash(); this.effects.setVisible(false); this.services.platform.setGameplayActive(false); return;
+  }
   if (this.screen === 'menu') this.drawMenu();
   else if (this.screen === 'journal') this.drawJournal();
   else this.drawPlay();
   if (this.modal) this.drawModal();
   if (this.noticeUntil > 0) this.text(240,617,this.services.locale.t('rewardUnavailable'),'caption',410);
-  if (this.cover || this.externalBlock()) { this.overlay(); this.text(240,400,this.services.locale.t(this.ready ? 'paused' : 'loading'),'screenTitle'); }
+  // Plain window blur cancels the held figure and freezes gameplay without
+  // replacing its restored visual state (browser chrome can take focus).
+  const gate = this.services.gate;
+  const focusOnly = gate.has('focus') && !gate.has('sdk') && !gate.has('browser') && !gate.has('ad') && !gate.has('transition');
+  if (this.cover || (this.externalBlock() && !focusOnly)) { this.overlay(); this.text(240,400,this.services.locale.t(this.ready ? 'paused' : 'loading'),'screenTitle'); }
   this.effects.setVisible(this.backdrop === null);
-  this.services.platform.setGameplayActive(this.screen === 'play' && !this.terminal && !this.services.gate.paused && this.ready);
+  this.services.platform.setGameplayActive(this.screen === 'play' && !this.terminal && !this.services.gate.paused && !this.modal && !this.services.flow.busy && this.ready);
+ }
+ private drawSplash(): void {
+  // Opaque, text-free Canvas cover. No hit areas, buttons or ad requests.
+  this.root.add(createViewportBackdrop(this,0xf6efe6,1));
+  if (this.textures.exists('cozy-mosaic-flower')) {
+   this.root.add(this.add.image(240,400,'cozy-mosaic-flower').setDisplaySize(300,230).setName('splash-emblem'));
+  }
  }
  private drawMenu(): void {
   const { locale, model, campaign } = this.services;
@@ -217,7 +271,10 @@ export class WorkshopScene extends Phaser.Scene {
    const stats = journalProgress(order.fragments,complete,null);
    const status = stats ? `${locale.t('removed')} ${stats.removed}/${stats.total}` : locale.t(unlocked ? 'available' : 'locked');
    this.text(122,y+22,status,'caption',0,complete ? '#5B704D' : '#7A6A60').setOrigin(0,0.5).setName(`order-status-${order.id}`);
-   this.zone(`order-${index+1}`,240,y,416,cardHeight,() => this.startOrder(order.id),!unlocked);
+   this.zone(`order-${index+1}`,240,y,416,cardHeight,() => {
+    if (complete) void this.services.flow.transition(() => this.startOrder(order.id,true));
+    else this.startOrder(order.id);
+   },!unlocked);
   });
   this.text(240,704,`${orders.filter(o=>campaign.completed.includes(o.id)).length} / ${orders.length} · ${locale.t('completed')}`,'caption',430,'#5B704D');
   this.button('journal-back','back',240,756,() => this.navigate('menu'),360,false,true);
@@ -329,7 +386,7 @@ export class WorkshopScene extends Phaser.Scene {
   this.text(240,328,locale.t(success ? next ? 'orderDone' : 'sliceDone' : 'gameOver'),'screenTitle',390);
   this.text(240,380,order.title[locale.locale],'body',390);
   this.text(240,420,`${locale.t('moves')}: ${active.moves}`,'caption',350,'#7A6A60');
-  const transition = (action: () => void): void => { void this.services.flow.transition(action,false); };
+  const transition = (action: () => void): void => { void this.services.flow.transition(action); };
   if (success && next) this.button('next-order','nextOrder',240,480,() => transition(() => this.startOrder(next.id)),360,false,true);
   else this.button('result-journal','toOrders',240,480,() => this.navigate('journal'),360,false,true);
   this.button('result-retry','retry',240,553,() => transition(() => this.startOrder(order.id,true)),360);
@@ -348,15 +405,19 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private navigate(screen: 'menu' | 'journal' | 'play'): void {
   if (this.externalBlock() || this.modal || this.services.flow.busy) return;
-  this.commitNavigation(screen);
-  if (screen === 'journal' && this.services.campaign.notice) this.openModal('campaignNotice');
+  if (this.screen === 'play' && screen !== 'play') {
+   void this.services.flow.transition(() => this.commitNavigation(screen));
+  } else {
+   this.commitNavigation(screen);
+   if (screen === 'journal' && this.services.campaign.notice) this.openModal('campaignNotice');
+  }
  }
  /** Ad destinations can navigate while transition/SDK pause still owns input. */
  private commitNavigation(screen: 'menu' | 'journal' | 'play'): void {
   this.cancelDrag(); this.effects.removeAll(true);
   if (this.screen === 'play' && this.mode === 'campaign' && screen !== 'play') this.services.campaign.abandon();
   this.screen=screen;
-  this.services.gate.set('startup',screen !== 'play'); this.invalidate();
+  this.services.gate.set('startup',screen !== 'play'); this.syncClassicClock(); this.invalidate();
  }
  private openModal(modal: Exclude<Modal,null>): void {
   if (this.modal || this.externalBlock() || this.services.flow.busy) return;
@@ -364,7 +425,7 @@ export class WorkshopScene extends Phaser.Scene {
    if (this.mode !== 'classic' || this.services.platform.id !== 'yandex') return;
    this.offering=this.services.model.prepareReward(); if (!this.offering) return;
   }
-  this.cancelDrag(); this.effects.removeAll(true); this.modal=modal; this.services.gate.set('manual',true); this.invalidate();
+  this.cancelDrag(); this.effects.removeAll(true); this.modal=modal; this.services.gate.set('manual',true); this.syncClassicClock(); this.invalidate();
  }
  private closeModal(): void { this.modal=null; this.pendingExit=null; this.offering=null; this.services.gate.set('manual',false); this.invalidate(); }
  private drawModal(): void {
@@ -416,7 +477,7 @@ export class WorkshopScene extends Phaser.Scene {
     const offer=this.offering; this.closeModal();
     if (restart) {
      this.comboRemaining=0;
-     if (campaign) { const id=this.services.campaign.active!.orderId; this.startOrder(id,true); }
+     if (campaign) { const id=this.services.campaign.active!.orderId; void this.services.flow.transition(() => this.startOrder(id,true)); }
      else void this.services.flow.restart();
     } else if (offer) void this.services.flow.reward(offer).then(granted => {
      if (this.disposed || !this.scene.isActive()) return;
@@ -477,7 +538,8 @@ export class WorkshopScene extends Phaser.Scene {
     else if (active.status === 'failed') this.services.audio.gameOver();
     else if (active.remainingTargets.length < oldRemaining) this.services.audio.clear(); else this.services.audio.place();
    }
-   if (!this.terminal) for (let r=0;r<10;r++) for (let c=0;c<10;c++) if (before[r]![c] && !this.board[r]![c]) {
+   const intermission = this.mode === 'classic' && this.tryClassicIntermission();
+   if (!this.terminal && !intermission) for (let r=0;r<10;r++) for (let c=0;c<10;c++) if (before[r]![c] && !this.board[r]![c]) {
     const light=this.add.rectangle(BOARD.x+c*44+22,BOARD.y+r*44+22,40,40,0xfff8f1,.75);this.effects.add(light);
     this.tweens.add({targets:light,alpha:0,duration:180,onComplete:()=>light.destroy()});
    }

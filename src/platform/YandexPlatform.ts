@@ -39,6 +39,7 @@ export class YandexPlatform implements PlatformService {
       let settled = false;
       let callbacksDone = false;
       let wasShown = false;
+      let opened = false;
       let watchdog: ReturnType<typeof setTimeout> | null = null;
 
       const clearWatchdog = (): void => {
@@ -75,7 +76,8 @@ export class YandexPlatform implements PlatformService {
         this.sdk.adv!.showFullscreenAdv({
           callbacks: {
           onOpen: () => {
-            if (callbacksDone) return;
+            if (callbacksDone || opened) return;
+            opened = true;
             console.info("[Block SDK] interstitial_open");
             // Tell the game only when a real ad starts, not on button press.
             try { onOpen?.(); } catch (error) {
@@ -104,42 +106,47 @@ export class YandexPlatform implements PlatformService {
     });
   }
 
-  showRewarded(): Promise<boolean> {
+  showRewarded(onOpen?: () => void): Promise<boolean> {
     if (!this.sdk.adv?.showRewardedVideo) return Promise.resolve(false);
     return new Promise<boolean>((resolve) => {
       let settled = false;
       let rewarded = false;
+      let opened = false;
       let watchdog: ReturnType<typeof setTimeout> | null = null;
-      const finish = (): void => {
+      const finish = (completed = true): void => {
         if (settled) return;
         settled = true;
         if (watchdog !== null) clearTimeout(watchdog);
         console.info("[Block SDK] rewarded_hint_complete", rewarded);
-        resolve(rewarded);
+        resolve(completed && rewarded);
       };
       watchdog = setTimeout(() => {
         console.warn("[Block SDK] rewarded_hint_timeout");
-        finish();
+        finish(false);
       }, 120000);
       try {
         this.sdk.adv!.showRewardedVideo({
           callbacks: {
-            onOpen: () => console.info("[Block SDK] rewarded_hint_open"),
+            onOpen: () => {
+              if (settled || opened) return;
+              opened = true;
+              try { onOpen?.(); } catch (error) { console.warn("[Block SDK] rewarded_open_listener_failed", error); }
+            },
             onRewarded: () => {
               if (settled) return;
               rewarded = true;
               console.info("[Block SDK] rewarded_hint_granted");
             },
-            onClose: finish,
+            onClose: () => finish(),
             onError: (error) => {
               console.warn("[Block SDK] rewarded_hint_error", error);
-              finish();
+              finish(false);
             },
           },
         });
       } catch (error) {
         console.warn("[Block SDK] rewarded_hint_throw", error);
-        finish();
+        finish(false);
       }
     });
   }

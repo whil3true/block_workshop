@@ -14,23 +14,38 @@ import { attachBrowserGameplayLifecycle } from './BrowserGameplayLifecycle';
 import { LocaleRuntime } from './LocaleRuntime';
 import { PauseGate } from './PauseGate';
 import { shouldSuspendAudio } from './AudioPausePolicy';
+import { showNavigationCover, hideNavigationCover, armNavigationCoverFallback } from '../platform/NavigationCover';
+import { SdkInputGuard } from '../platform/SdkInputGuard';
 import { AdFlow } from './AdFlow';
 import { WorkshopScene } from '../phaser/WorkshopScene';
 import { computeRenderScale, selectStartupRenderScale, isDesktopBrowserUserAgent, LOGICAL_GAME_WIDTH, LOGICAL_GAME_HEIGHT } from '../phaser/Display';
 
 export const afterFrame = (): Promise<void> => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+// One release frame consumes the old pointerup/click. Rebuilt hit areas enter
+// Phaser's input list on the following frame, alongside their first visible render.
+const afterInputFrame = (): Promise<void> => new Promise(resolve => requestAnimationFrame(() => resolve()));
 export async function boot(platformFactory = createPlatform) {
  // Initialize SDK and retain startup events before constructing Phaser/audio.
- const platform = await platformFactory();
- await document.fonts.load('700 24px Nunito').catch(() => {});
- return mountApplication(platform);
+ const inputGuard = new SdkInputGuard(afterInputFrame);
+ try {
+  const platform = await platformFactory();
+  await document.fonts.load('700 24px Nunito').catch(() => {});
+  return mountApplication(platform, inputGuard);
+ } catch (error) { inputGuard.dispose(); throw error; }
 }
-export function mountApplication(platform: PlatformService) {
+export function mountApplication(platform: PlatformService, inputGuard = new SdkInputGuard(afterInputFrame)) {
  const gate = new PauseGate(); gate.set('startup', true); gate.set('sdk', platform.isPaused);
  let scene: WorkshopScene | undefined;
  const detachSdkPause = platform.onPause(() => gate.set('sdk', true));
  const detachSdkResume = platform.onResume(() => gate.set('sdk', false));
  const detachBrowser = attachBrowserGameplayLifecycle({ onBackground: () => gate.set('browser', true), onForeground: () => gate.set('browser', false) });
+ const detachInput = inputGuard.subscribe(() => {
+  gate.set('input', inputGuard.isLocked);
+  if (!inputGuard.isLocked) scene?.refreshAfterExternalRelease();
+ });
+ const blur = (): void => gate.set('focus', true);
+ const focus = (): void => gate.set('focus', false);
+ window.addEventListener('blur', blur); window.addEventListener('focus', focus);
  const locale = new LocaleRuntime(platform.id === 'yandex' ? platform.locale : undefined);
  const translate = (): void => { document.documentElement.lang = locale.locale; document.title = locale.t('title'); scene?.invalidate(); };
  translate();
@@ -41,11 +56,14 @@ export function mountApplication(platform: PlatformService) {
  const model = createModel({ audio, canInteract: () => !gate.paused,
   onChange: () => scene?.invalidate(), onCombo: streak => scene?.showCombo(streak) });
  const campaign = new CampaignController(() => scene?.invalidate(), () => !gate.paused);
- const flow = new AdFlow<TrayOffer>({ gate, platform, interstitial: new InterstitialController(platform),
-  cover: visible => scene?.setCover(visible), afterFrame,
+ const interstitial = new InterstitialController(platform);
+ const flow = new AdFlow<TrayOffer>({ gate, platform, interstitial,
+  cover: visible => { if (visible) showNavigationCover(); else hideNavigationCover(); scene?.setCover(visible); },
+  afterFrame: async () => { armNavigationCoverFallback(); await afterFrame(); },
+  refreshAfterTransition: () => scene?.refreshAfterExternalRelease(),
   restart: () => model.commitRestart(), applyReward: offer => model.commitReward(offer) });
  const density = selectStartupRenderScale(computeRenderScale(window.devicePixelRatio || 1, window.innerWidth, window.innerHeight), isDesktopBrowserUserAgent(navigator.userAgent, navigator.maxTouchPoints));
- scene = new WorkshopScene({ model, campaign, gate, locale, manager, audio, platform, flow, density });
+ scene = new WorkshopScene({ model, campaign, gate, locale, manager, audio, platform, flow, interstitial, density });
  const game = new Phaser.Game({
   type: Phaser.AUTO, parent: 'app', transparent: true, scene: [scene],
   audio: { noAudio: true }, // The shared Cozy audio lifecycle owns media and Web Audio.
@@ -57,6 +75,7 @@ export function mountApplication(platform: PlatformService) {
  const detachGate = gate.subscribe(() => {
   // A modal pauses gameplay input, not background music or UI SFX.
   // Only external interruptions (SDK/browser/ad/transition) suspend audio.
+  inputGuard.setBlocked(gate.has('sdk') || gate.has('browser') || gate.has('focus') || gate.has('ad'));
   manager.setAdActive(shouldSuspendAudio(gate));
   scene?.onPauseChange(); flow.flushReward();
   if (gate.paused) platform.setGameplayActive(false);
@@ -65,7 +84,7 @@ export function mountApplication(platform: PlatformService) {
  let ready = false;
  // Like Cozy GameReady, wait until an interactive scene has actually rendered.
  const onRender = (): void => {
-  if (ready || gate.has('sdk') || gate.has('browser') || !scene?.scene.isActive()) return;
+  if (ready || gate.has('sdk') || gate.has('browser') || gate.has('focus') || gate.has('input') || !scene?.scene.isActive()) return;
   if (!prepared) { prepared = true; scene.setReady(); return; }
   // Recheck external pause ownership on every frame, including a pause that
   // arrives between constructing the menu and rendering its enabled state.
@@ -74,7 +93,8 @@ export function mountApplication(platform: PlatformService) {
  };
  game.events.on(Phaser.Core.Events.POST_RENDER, onRender);
  const destroy = (): void => {
-  flow.dispose(); platform.setGameplayActive(false); manager.dispose(); configureAudioRuntime(null);
+  hideNavigationCover(); flow.dispose(); platform.setGameplayActive(false); manager.dispose(); configureAudioRuntime(null);
+  detachInput(); inputGuard.dispose(); window.removeEventListener('blur', blur); window.removeEventListener('focus', focus);
   detachGate(); detachLocale(); detachAudio(); detachBrowser(); detachSdkPause(); detachSdkResume();
   game.events.off(Phaser.Core.Events.POST_RENDER, onRender);
   if ('destroy' in platform && typeof platform.destroy === 'function') platform.destroy();

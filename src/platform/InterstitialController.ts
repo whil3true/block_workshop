@@ -3,11 +3,21 @@ import type { PlatformService } from "./PlatformService.js";
 export const INTERSTITIAL_COOLDOWN_MS = 90_000;
 export const INTERSTITIAL_RETRY_MS = 15_000;
 
-/** Keeps adverts tied to an intentional level boundary, never to a timer. */
+/** Shares frequency limits across navigation and completed-placement boundaries. */
 export class InterstitialController {
   private lastShownAt: number;
   private lastAttemptAt: number | null = null;
   private pending = false;
+  private revision = 0;
+  get shownRevision(): number { return this.revision; }
+  /** Fullscreen and rewarded completion share the same frequency window. */
+  recordShown(): void { this.lastShownAt = this.now(); this.revision++; }
+  get eligible(): boolean {
+    const time = this.now();
+    return this.platform.id === 'yandex' && !this.pending
+      && time - this.lastShownAt >= INTERSTITIAL_COOLDOWN_MS
+      && (this.lastAttemptAt === null || time - this.lastAttemptAt >= INTERSTITIAL_RETRY_MS);
+  }
 
   constructor(
     private readonly platform: Pick<PlatformService, "id" | "showInterstitial">,
@@ -33,8 +43,9 @@ export class InterstitialController {
     this.pending = true;
     console.info("[Block SDK] interstitial_request");
     try {
-      const shown = await this.platform.showInterstitial(onOpen);
-      if (shown) this.lastShownAt = this.now();
+      let opened = false;
+      const shown = await this.platform.showInterstitial(() => { if (opened) return; opened = true; onOpen?.(); });
+      if (shown || opened) this.recordShown();
       else console.info("[Block SDK] interstitial_not_shown");
       return shown;
     } catch (error) {

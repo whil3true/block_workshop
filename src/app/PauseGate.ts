@@ -1,4 +1,4 @@
-export type PauseReason = 'sdk' | 'browser' | 'manual' | 'startup' | 'transition' | 'ad';
+export type PauseReason = 'sdk' | 'browser' | 'manual' | 'startup' | 'transition' | 'ad' | 'input' | 'focus';
 /** Each owner can release only its own reason. Subscribers see the initial state. */
 export class PauseGate {
  private reasons = new Set<PauseReason>();
