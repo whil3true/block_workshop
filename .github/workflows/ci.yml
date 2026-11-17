@@ -24,6 +24,10 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run check
+      - name: Test Yandex package validator
+        run: python3 -m unittest discover -s scripts -p test_check_yandex_build.py -v
+      - name: Validate Yandex production tree
+        run: python3 scripts/check-yandex-build.py dist
       - uses: actions/upload-artifact@v4
         with:
           name: production-dist
@@ -84,6 +88,41 @@ jobs:
             test-results
             blob-report
           if-no-files-found: error
+
+  yandex-release:
+    name: Yandex upload-ready ZIP
+    needs: [build, verify]
+    if: ${{ success() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist
+      - name: Recheck the exact tested production tree
+        run: python3 scripts/check-yandex-build.py dist
+      # Upload the directory contents, never a prebuilt ZIP: the GitHub download
+      # itself must have index.html at its root and must not contain another ZIP.
+      - name: Publish Yandex upload-ready files
+        id: ready
+        uses: actions/upload-artifact@v4
+        with:
+          name: yandex-upload-ready
+          path: dist
+          if-no-files-found: error
+          overwrite: true
+      - name: Verify the actual downloadable ZIP against production-dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          YANDEX_ARTIFACT_ID: ${{ steps.ready.outputs.artifact-id }}
+          YANDEX_ARTIFACT_URL: ${{ steps.ready.outputs.artifact-url }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${YANDEX_ARTIFACT_ID}/zip" > "${RUNNER_TEMP}/yandex-upload-ready.zip"
+          python3 scripts/check-yandex-build.py "${RUNNER_TEMP}/yandex-upload-ready.zip" --compare dist --report "${RUNNER_TEMP}/yandex-upload-validation.json"
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
