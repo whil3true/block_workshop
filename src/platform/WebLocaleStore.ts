@@ -31,7 +31,9 @@ export class WebLocaleStore {
   }
 }
 
-/** Respect saved language before the platform locale. */
+/** Respect saved language before the platform locale. Legacy values have unknown
+ * provenance; preserve them rather than discard a possible manual preference.
+ * New writes come only from a real in-game language change. */
 export const resolveStartupLocale = (
   storedLocale: SupportedLocale | null, platformLanguage?: string,
 ): SupportedLocale => {
@@ -41,3 +43,4 @@ export const resolveStartupLocale = (
   const sdkLocale = sdkLanguage === "ru" ? "ru" : sdkLanguage ? "en" : null;
   return storedLocale ?? sdkLocale ?? DEFAULT_LOCALE;
 };
+

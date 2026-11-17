@@ -46,10 +46,10 @@ describe('production model matches the frozen DOM controller', () => {
  it('does not construct DOM in the production model', () => {
   const spy = vi.spyOn(document, 'createElement'); createModel(); expect(spy).not.toHaveBeenCalled(); spy.mockRestore();
  });
- it('persists the first platform locale and respects it on subsequent startup', () => {
+ it('uses the current platform locale on each startup without a manual preference', () => {
   expect(new LocaleRuntime('ru').locale).toBe('ru');
-  expect(localStorage.getItem('block-workshop:ui-locale')).toBe('ru');
-  expect(new LocaleRuntime('en').locale).toBe('ru');
+  expect(localStorage.getItem('block-workshop:ui-locale')).toBeNull();
+  expect(new LocaleRuntime('en').locale).toBe('en');
  });
  it('top-left and bottom-right cells stay reachable, outside coordinates are rejected', () => {
   expect(boardAnchor(20,156)).toEqual({row:0,col:0});
@@ -57,3 +57,4 @@ describe('production model matches the frozen DOM controller', () => {
   expect(boardAnchor(460,596)).toBeNull(); expect(boardAnchor(19.99,156)).toBeNull();
  });
 });
+
