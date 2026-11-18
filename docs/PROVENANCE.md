@@ -59,7 +59,7 @@ Baseline: все 19 файлов / 379 тестов успешно воспро�
 
 Production npm dependencies отсутствуют. Сохранён Vite license для генерируемого preload helper; полный lock inventory — `dependency-inventory.json`. Dev dependencies не включены в `dist` и ZIP исходников node_modules не содержит.
 
-`public/audio/*.wav` синтезированы `scripts/generate-audio.py`: семь коротких эффектов и оригинальный 32-секундный тихий арпеджио-loop, без импортированных записей/сэмплов/шрифтов. Production build включает notices. Изображения и внешние шрифты не используются.
+Игровое аудио в `public/audio/` включает одну композицию Kistol и шесть эффектов Kenney. Источники и лицензии указаны в [AUDIO_LICENSES.md](AUDIO_LICENSES.md). Production build включает сведения об авторах и лицензиях в `THIRD_PARTY_NOTICES.txt`.
 
 У снимка Cozy нет общего LICENSE; его код перенесён для проекта владельца по прямому заданию. MIT чужого 10block сохранён и не используется для переобозначения прав на код владельца.
 

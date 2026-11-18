@@ -5,6 +5,7 @@ import { findPieceById } from '../pieces';
 import type { ModelApi, TrayOffer } from '../model';
 import type { AudioApi } from '../audio';
 import type { AudioManager } from '../audio/AudioManager';
+import { playAudioEffect } from '../audio/AudioRuntime';
 import type { PlatformService } from '../platform/PlatformService';
 import type { PauseGate } from '../app/PauseGate';
 import type { AdFlow } from '../app/AdFlow';
@@ -172,10 +173,13 @@ export class WorkshopScene extends Phaser.Scene {
   });
   button.container.setName(key); this.root.add(button.container);
  }
- private zone(key: string,x: number,y: number,w: number,h: number,action: () => void, disabled = false): void {
+ private zone(key: string,x: number,y: number,w: number,h: number,action: () => void, disabled = false, canActivate?: () => boolean): void {
   const zone = this.add.zone(x,y,w,h).setName(key);
   if (!disabled && !this.externalBlock()) zone.setInteractive({useHandCursor:true}).on('pointerdown', () => {
-   if (!this.externalBlock() && !this.modal) { this.services.audio.unlock(); action(); }
+   if (this.externalBlock() || this.modal || canActivate?.() === false) return;
+   this.services.audio.unlock();
+   playAudioEffect('click');
+   action();
   });
   this.root.add(zone);
  }
@@ -254,8 +258,8 @@ export class WorkshopScene extends Phaser.Scene {
    this.root.add(this.add.container(0,0,[paperSurface(this,'chapter-tab',x,174,66,66,0x9cab86)]).setAlpha(entry.number === this.chapter ? 1 : .58));
    this.text(x,174,String(entry.number),'body',0,entry.number === this.chapter ? '#30452D' : '#7A6A60');
    this.zone(`chapter-${entry.number}`,x,174,66,66,() => {
-    if (this.chapter !== entry.number) { this.chapter=entry.number; this.invalidate(); }
-   });
+    this.chapter=entry.number; this.invalidate();
+   },false,() => this.chapter !== entry.number);
   });
   // Share the former pagination space between equal cards and their outer gaps.
   const cardHeight = 132;
@@ -531,12 +535,11 @@ export class WorkshopScene extends Phaser.Scene {
    const before=this.board;
    if (this.mode === 'classic') this.services.model.place(drag.slot,anchor.row,anchor.col);
    else {
-    const oldRemaining=this.services.campaign.active!.remainingTargets.length;
     this.services.campaign.place(drag.slot,anchor.row,anchor.col);
     const active=this.services.campaign.active!;
-    if (active.status === 'succeeded') this.services.audio.perfect();
+    if (active.status === 'succeeded') playAudioEffect('orderComplete');
     else if (active.status === 'failed') this.services.audio.gameOver();
-    else if (active.remainingTargets.length < oldRemaining) this.services.audio.clear(); else this.services.audio.place();
+    else if (active.streak > 0) this.services.audio.clear(); else this.services.audio.place();
    }
    const intermission = this.mode === 'classic' && this.tryClassicIntermission();
    if (!this.terminal && !intermission) for (let r=0;r<10;r++) for (let c=0;c<10;c++) if (before[r]![c] && !this.board[r]![c]) {

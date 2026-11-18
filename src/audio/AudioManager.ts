@@ -13,7 +13,7 @@ export interface AudioOutput {
   /** Suspend Web Audio and any effect fallback when hidden or advertising. */
   setEffectsActive?(active: boolean): void;
   playEffect(path: string, volume: number): void;
-  startMusic(path: string, volume: number, onEnded: () => void): void;
+  startMusic(path: string, volume: number): void;
   setMusicVolume(volume: number): void;
   pauseMusic(): void;
   resumeMusic(): void;
@@ -32,8 +32,6 @@ export class AudioManager {
   private pageVisible = true;
   private adActive = false;
   private status: MusicStatus = "idle";
-  private trackIndex = 0;
-  private generation = 0;
   private readonly lastEffectAt = new Map<AudioEffect, number>();
   private disposed = false;
 
@@ -64,21 +62,23 @@ export class AudioManager {
 
   unlock(): void {
     if (this.disposed) return;
-    // Called in capture phase on the FIRST pointerdown, while activation is valid.
+    // Capture phase arms playback before the scene handles the gesture.
     const firstUnlock = !this.unlocked;
     this.unlocked = true;
     this.syncEffects();
-    this.output.onUserGesture?.();
-    if (firstUnlock) this.syncMusic();
-    // On every later pointerdown, retry only if the browser has not started
-    // the media element. The release of the first tap has its own retry hook.
-    else this.retryPlaybackFromGesture();
+    if (firstUnlock) {
+      this.output.onUserGesture?.();
+      this.syncMusic();
+    } else {
+      this.retryPlaybackFromGesture();
+    }
   }
 
-  /** Retry browser-rejected media.play() synchronously on a fresh trusted gesture. */
+  /** Retry browser-blocked Web Audio and music within a user activation. */
   retryPlaybackFromGesture(): void {
-    if (this.disposed || !this.unlocked || !this.pageVisible || this.adActive || this.settings.musicVolume === 0) return;
-    if (this.status === "playing") this.output.resumeMusic();
+    if (this.disposed || !this.unlocked || !this.pageVisible || this.adActive) return;
+    this.output.onUserGesture?.();
+    if (this.status === "playing" && this.settings.musicVolume > 0) this.output.resumeMusic();
   }
 
   setPageVisible(visible: boolean): void {
@@ -105,11 +105,9 @@ export class AudioManager {
     this.output.playEffect(AUDIO_EFFECTS[effect], this.settings.sfxVolume * AUDIO_EFFECT_GAIN[effect]);
   }
 
-  /** Removes stale end callbacks when the game is disposed. */
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.generation += 1;
     this.output.setEffectsActive?.(false);
     this.output.stopMusic();
     this.status = "idle";
@@ -131,7 +129,8 @@ export class AudioManager {
       return;
     }
     if (this.status === "idle") {
-      this.playCurrentTrack();
+      this.status = "playing";
+      this.output.startMusic(AUDIO_MUSIC, this.settings.musicVolume);
     } else {
       this.output.setMusicVolume(this.settings.musicVolume);
       if (this.status === "paused") {
@@ -139,17 +138,5 @@ export class AudioManager {
         this.status = "playing";
       }
     }
-  }
-
-  private playCurrentTrack(): void {
-    const token = ++this.generation;
-    const track = AUDIO_MUSIC[this.trackIndex]!;
-    this.status = "playing";
-    this.output.startMusic(track.path, this.settings.musicVolume, () => {
-      if (this.disposed || token !== this.generation) return;
-      this.trackIndex = (this.trackIndex + 1) % AUDIO_MUSIC.length;
-      this.status = "idle";
-      this.syncMusic();
-    });
   }
 }

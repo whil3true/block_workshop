@@ -20,8 +20,8 @@ export const attachBrowserAudioLifecycle = (
     manager.unlock();
   };
   const retryOnRelease = (): void => {
-    // pointerup is a second user-activation opportunity within the SAME tap.
-    // Some mobile browsers reject or defer play() on pointerdown while loading.
+    // Touch activation can arrive on pointerup. Retry playback without emitting
+    // another effect for the same tap.
     if (pageGone || doc.hidden || !focused) return;
     manager.retryPlaybackFromGesture();
   };

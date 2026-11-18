@@ -8,10 +8,11 @@ import type { AudioOutput } from "./AudioManager.js";
 export class HtmlAudioOutput implements AudioOutput {
   private readonly buffers = new Map<string, AudioBuffer>();
   private readonly fallbackPools = new Map<string, HTMLAudioElement[]>();
+  private readonly playingEffects = new Set<AudioBufferSourceNode>();
   private effectsContext: AudioContext | null = null;
   private effectsActive = false;
   private music: HTMLAudioElement | null = null;
-  private preparedFirstTrack: HTMLAudioElement | null = null;
+  private preparedMusic: HTMLAudioElement | null = null;
   private musicNeedsRetry = false;
   private musicPlayToken = 0;
   // Retain the logical soundtrack state independently of the media element.
@@ -19,20 +20,19 @@ export class HtmlAudioOutput implements AudioOutput {
   private musicPath: string | null = null;
   private musicVolume = 1;
   private musicPosition = 0;
-  private musicEnded: (() => void) | null = null;
 
   constructor() {
     this.prepareMusic();
     this.prepareEffects();
   }
 
-  /** Warm the first track BEFORE the initial user tap, but never autoplay it. */
+  /** Warm the track before the initial user tap, without autoplay. */
   private prepareMusic(): void {
     try {
-      const music = new Audio(AUDIO_MUSIC[0]!.path);
+      const music = new Audio(AUDIO_MUSIC);
       music.preload = "auto";
       music.load();
-      this.preparedFirstTrack = music;
+      this.preparedMusic = music;
     } catch {
       // Unsupported media must not prevent the game from booting.
     }
@@ -88,6 +88,8 @@ export class HtmlAudioOutput implements AudioOutput {
     const context = this.effectsContext;
     if (!active) {
       // Stop already-playing SFX, not only future effects.
+      for (const source of this.playingEffects) source.stop();
+      this.playingEffects.clear();
       for (const pool of this.fallbackPools.values()) for (const player of pool) player.pause();
       if (context && context.state !== "suspended") {
         try { void context.suspend().catch(() => {}); } catch { /* closed context */ }
@@ -109,6 +111,12 @@ export class HtmlAudioOutput implements AudioOutput {
         source.connect(gain);
         gain.connect(context.destination);
         source.start(0);
+        this.playingEffects.add(source);
+        source.onended = () => {
+          this.playingEffects.delete(source);
+          source.disconnect();
+          gain.disconnect();
+        };
       } catch {
         // Do not enqueue a sound to fire late after navigation.
       }
@@ -136,12 +144,11 @@ export class HtmlAudioOutput implements AudioOutput {
     } catch { /* silence on unsupported browsers */ }
   }
 
-  startMusic(path: string, volume: number, onEnded: () => void): void {
+  startMusic(path: string, volume: number): void {
     this.stopMusic();
     this.musicPath = path;
     this.musicVolume = Math.max(0, Math.min(1, volume));
     this.musicPosition = 0;
-    this.musicEnded = onEnded;
     this.createMusicPlayer();
   }
 
@@ -178,7 +185,6 @@ export class HtmlAudioOutput implements AudioOutput {
   stopMusic(): void {
     this.releaseMusicElement();
     this.musicPath = null;
-    this.musicEnded = null;
     this.musicPosition = 0;
     this.clearMediaSession();
   }
@@ -187,15 +193,12 @@ export class HtmlAudioOutput implements AudioOutput {
     const path = this.musicPath;
     if (path === null) return;
     try {
-      const prepared = this.preparedFirstTrack;
-      const player = prepared && path === AUDIO_MUSIC[0]!.path ? prepared : new Audio(path);
-      this.preparedFirstTrack = null;
+      const prepared = this.preparedMusic;
+      const player = prepared && path === AUDIO_MUSIC ? prepared : new Audio(path);
+      this.preparedMusic = null;
       player.preload = "auto";
-      player.loop = false;
+      player.loop = true;
       player.volume = this.musicVolume;
-      player.addEventListener("ended", () => {
-        if (this.music === player) this.musicEnded?.();
-      });
       this.music = player;
       const position = this.musicPosition;
       if (position > 0) {
@@ -221,7 +224,7 @@ export class HtmlAudioOutput implements AudioOutput {
     ++this.musicPlayToken;
     this.musicNeedsRetry = false;
     const player = this.music;
-    this.music = null; // Ignore stale play/ended/metadata callbacks.
+    this.music = null; // Ignore stale play/metadata callbacks.
     if (!player) return;
     try {
       player.pause();

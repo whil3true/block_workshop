@@ -1,5 +1,6 @@
 import { describe,it,expect,vi,afterEach } from 'vitest';
 import { AudioManager, type AudioOutput } from '../src/audio/AudioManager';
+import { AUDIO_EFFECTS, AUDIO_MUSIC } from '../src/audio/AudioAssetManifest';
 import { shouldSuspendAudio } from '../src/app/AudioPausePolicy';
 import { PauseGate } from '../src/app/PauseGate';
 import { createAudioSettings, parseAudioSettings } from '../src/audio/AudioSettings';
@@ -9,10 +10,10 @@ import { attachBrowserAudioLifecycle } from '../src/audio/BrowserAudioLifecycle'
 import { HtmlAudioOutput } from '../src/audio/HtmlAudioOutput';
 import { gameAudio } from '../src/audio/GameAudio';
 function setup(){
- let now=0;const ended:Array<()=>void>=[];
- const output:AudioOutput={onUserGesture:vi.fn(),setEffectsActive:vi.fn(),playEffect:vi.fn(),startMusic:vi.fn((_p,_v,f)=>{ended.push(f);}),setMusicVolume:vi.fn(),pauseMusic:vi.fn(),resumeMusic:vi.fn(),stopMusic:vi.fn()};
+ let now=0;
+ const output:AudioOutput={onUserGesture:vi.fn(),setEffectsActive:vi.fn(),playEffect:vi.fn(),startMusic:vi.fn(),setMusicVolume:vi.fn(),pauseMusic:vi.fn(),resumeMusic:vi.fn(),stopMusic:vi.fn()};
  const repo={load:()=>createAudioSettings(.4,.65),save:vi.fn()};const manager=new AudioManager(output,repo,()=>now);
- return {manager,output,repo,ended,advance:(ms:number)=>{now+=ms;}};
+ return {manager,output,repo,advance:(ms:number)=>{now+=ms;}};
 }
 afterEach(()=>{vi.restoreAllMocks();vi.unstubAllGlobals();});
 describe('mixer adapted from Cozy',()=>{
@@ -20,7 +21,33 @@ describe('mixer adapted from Cozy',()=>{
  it('music and effects levels are independent and persisted',()=>{const s=setup();s.manager.unlock();s.manager.setSfxVolume(0);s.manager.playEffect('place');expect(s.output.playEffect).not.toHaveBeenCalled();s.manager.setMusicVolume(.7);expect(s.manager.getSettings()).toEqual({version:1,musicVolume:.7,sfxVolume:0});expect(s.repo.save).toHaveBeenCalledTimes(2);});
  it.each([['page','ad'],['ad','page']] as const)('no resume while %s/%s is still suspended',(a,b)=>{const s=setup();s.manager.unlock();const set=(key:string,v:boolean)=>key==='page'?s.manager.setPageVisible(!v):s.manager.setAdActive(v);set(a,true);set(b,true);set(a,false);s.manager.playEffect('place');expect(s.output.resumeMusic).not.toHaveBeenCalled();expect(s.output.playEffect).not.toHaveBeenCalled();set(b,false);expect(s.output.resumeMusic).toHaveBeenCalledTimes(1);});
  it('per-effect throttle never queues sound for after an ad',()=>{const s=setup();s.manager.unlock();s.manager.playEffect('place');s.manager.playEffect('place');s.manager.playEffect('pickup');expect(s.output.playEffect).toHaveBeenCalledTimes(2);s.manager.setAdActive(true);s.advance(100);s.manager.playEffect('clear');s.manager.setAdActive(false);expect(s.output.playEffect).toHaveBeenCalledTimes(2);});
- it('dispose invalidates old track callbacks',()=>{const s=setup();s.manager.unlock();s.ended[0]!();expect(s.output.startMusic).toHaveBeenCalledTimes(2);s.ended[0]!();expect(s.output.startMusic).toHaveBeenCalledTimes(2);s.manager.dispose();s.ended[1]!();s.manager.unlock();expect(s.output.startMusic).toHaveBeenCalledTimes(2);expect(s.output.stopMusic).toHaveBeenCalledTimes(1);});
+ it('starts only the single soundtrack and ignores gestures after disposal',()=>{
+  const s=setup();s.manager.unlock();
+  expect(s.output.startMusic).toHaveBeenCalledWith(AUDIO_MUSIC, .4);
+  s.manager.dispose();s.manager.unlock();s.manager.retryPlaybackFromGesture();
+  expect(s.output.startMusic).toHaveBeenCalledTimes(1);
+  expect(s.output.resumeMusic).not.toHaveBeenCalled();
+  expect(s.output.stopMusic).toHaveBeenCalledTimes(1);
+ });
+ it('keeps classic combo and perfect clears on the same effect and reserves the jingle for completed orders',()=>{
+  const s=setup(), api=gameAudio(s.manager,()=>{});s.manager.unlock();
+  api.combo();s.advance(60);api.perfect();s.manager.playEffect('orderComplete');
+  expect(vi.mocked(s.output.playEffect).mock.calls.map(([path])=>path)).toEqual([
+   AUDIO_EFFECTS.clear, AUDIO_EFFECTS.clear, AUDIO_EFFECTS.orderComplete,
+  ]);
+ });
+ it('retries touch-release Web Audio activation without replaying the click while music is muted',()=>{
+  const s=setup();s.manager.setMusicVolume(0);
+  const detach=attachBrowserAudioLifecycle(s.manager);
+  try {
+   window.dispatchEvent(new PointerEvent('pointerdown', { pointerType:'touch' }));
+   s.manager.playEffect('click');
+   window.dispatchEvent(new PointerEvent('pointerup', { pointerType:'touch' }));
+   expect(s.output.onUserGesture).toHaveBeenCalledTimes(2);
+   expect(s.output.playEffect).toHaveBeenCalledTimes(1);
+   expect(s.output.resumeMusic).not.toHaveBeenCalled();
+  } finally { detach(); }
+ });
  it('mute flag does not overwrite chosen volume levels',()=>{const s=setup(), onMute=vi.fn();const api=gameAudio(s.manager,onMute);s.manager.setMusicVolume(.27);api.setMuted(true);expect(s.manager.getSettings().musicVolume).toBe(.27);expect(localStorage.getItem('block-workshop:mute')).toBe('true');api.setMuted(false);expect(onMute).toHaveBeenLastCalledWith(false);expect(s.manager.getSettings().musicVolume).toBe(.27);});
  it('browser gestures unlock in capture phase, hidden page never retries',()=>{const s=setup();let hidden=false;Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});const detach=attachBrowserAudioLifecycle(s.manager);window.dispatchEvent(new PointerEvent('pointerdown'));expect(s.output.onUserGesture).toHaveBeenCalledTimes(1);hidden=true;document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new PointerEvent('pointerdown'));expect(s.output.onUserGesture).toHaveBeenCalledTimes(1);detach();hidden=false;delete (document as {hidden?:boolean}).hidden;});
 });
@@ -31,20 +58,26 @@ describe('settings and language persistence',()=>{
  it('storage unavailable keeps in-memory language and settings',()=>{vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw Error('denied');});vi.spyOn(Storage.prototype,'getItem').mockImplementation(()=>{throw Error('denied');});const locale=new LocaleRuntime('en');expect(()=>locale.set('ru')).not.toThrow();expect(locale.locale).toBe('ru');expect(()=>new WebAudioSettingsStore().save(createAudioSettings(.1,.2))).not.toThrow();});
 });
 describe('Android media-session mechanism (mock, not hardware)',()=>{
- it('releases source on background and resumes at saved position, ignores old ended',()=>{
+ it('loops one music element, releases its source in the background and resumes at the saved position',()=>{
   const instances:FakeAudio[]=[];
   class FakeAudio {
-   src:string;currentTime=0;paused=true;readyState=1;volume=1;preload='';loop=false;plays=0;listeners=new Map<string,()=>void>();
+   src:string;currentTime=0;paused=true;readyState=1;volume=1;preload='';loop=false;plays=0;
    constructor(src:string){this.src=src;instances.push(this);}
    load(){} play(){this.plays++;this.paused=false;return Promise.resolve();}pause(){this.paused=true;}
-   removeAttribute(name:string){if(name==='src')this.src='';}addEventListener(name:string,f:()=>void){this.listeners.set(name,f);}
+   removeAttribute(name:string){if(name==='src')this.src='';}
   }
   vi.stubGlobal('Audio',FakeAudio);vi.stubGlobal('AudioContext',undefined);
   const media={playbackState:'playing',metadata:{title:'test'}};Object.defineProperty(navigator,'mediaSession',{configurable:true,value:media});
   const manager=new AudioManager(new HtmlAudioOutput(),{load:()=>createAudioSettings(.4,.65),save:()=>{}});manager.unlock();
-  const first=instances.find(a=>a.src.endsWith('workshop.wav')&&a.plays>0)!;first.currentTime=12.5;manager.setPageVisible(false);
-  expect(first.src).toBe('');expect(first.paused).toBe(true);expect(media.playbackState).toBe('none');expect(media.metadata).toBeNull();first.listeners.get('ended')?.();
-  manager.setPageVisible(true);const second=instances.find(a=>a!==first&&a.src.endsWith('workshop.wav'))!;expect(second.currentTime).toBe(12.5);expect(first.plays).toBe(1);manager.dispose();
+  const first=instances.find(a=>a.src===AUDIO_MUSIC&&a.plays>0)!;
+  expect(first.loop).toBe(true);
+  first.currentTime=12.5;manager.setPageVisible(false);
+  expect(first.src).toBe('');expect(first.paused).toBe(true);expect(media.playbackState).toBe('none');expect(media.metadata).toBeNull();
+  manager.setPageVisible(true);
+  const second=instances.find(a=>a!==first&&a.src===AUDIO_MUSIC)!;
+  expect(second.loop).toBe(true);expect(second.currentTime).toBe(12.5);expect(first.plays).toBe(1);
+  expect(instances.filter(a=>!a.paused)).toEqual([second]);
+  manager.dispose();
  });
 });
 

@@ -29,8 +29,12 @@ class YandexPackageTests(unittest.TestCase):
         self.put('assets/cozy-mosaic/asset-manifest.json', json.dumps({'assets': [
             {'path': 'public/assets/cozy-mosaic/tile.png', 'sha256': hashlib.sha256(b'PNG').hexdigest()}
         ]}).encode())
-        for sound in validator.AUDIO:
-            self.put(f'audio/{sound}.wav', b'RIFF\x00\x00\x00\x00WAVE')
+        audio = {path: b'OggS fixture' for path in validator.AUDIO}
+        self.enterContext(patch.object(validator, 'AUDIO', {
+            path: hashlib.sha256(data).hexdigest() for path, data in audio.items()
+        }))
+        for path, data in audio.items():
+            self.put(path, data)
 
     def put(self, name, content):
         path = self.root / name
@@ -110,9 +114,16 @@ class YandexPackageTests(unittest.TestCase):
             validator.validate(self.root)
 
     def test_missing_dynamic_audio(self):
-        (self.root / 'audio/place.wav').unlink()
-        with self.assertRaisesRegex(ValueError, 'place.wav'):
+        (self.root / 'audio/drop_002.ogg').unlink()
+        with self.assertRaisesRegex(ValueError, r'drop_002\.ogg'):
             validator.validate(self.root)
+
+    def test_zip_rejects_extra_or_changed_audio(self):
+        with self.assertRaisesRegex(ValueError, 'Unexpected audio'):
+            validator.validate(self.archive([('assets/unused.wav', b'unused')]))
+        self.put('audio/click_003.ogg', b'OggS changed')
+        with self.assertRaisesRegex(ValueError, 'Audio asset hash mismatch'):
+            validator.validate(self.archive())
 
     def test_missing_or_changed_raster(self):
         self.put('assets/cozy-mosaic/tile.png', b'changed')
