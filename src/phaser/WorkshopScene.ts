@@ -232,8 +232,9 @@ export class WorkshopScene extends Phaser.Scene {
   const { locale, model, campaign } = this.services;
   if (this.textures.exists('cozy-mosaic-flower')) this.root.add(this.add.image(240,150,'cozy-mosaic-flower').setDisplaySize(230,176));
   else { this.surface('tile-sage',215,130,62,62,0x9cab86); this.surface('tile-apricot',266,174,62,62,0xdeaa8b); }
-  this.text(240,274,locale.t('title'),'screenTitle',440).setFontSize(36);
-  this.text(240,315,locale.t('studio'),'caption',430,'#7A6A60');
+  this.text(240,254,locale.t('titleBrand'),'screenTitle').setFontSize(36);
+  this.text(240,288,locale.t('titleGenre'),'body').setFontSize(26);
+  this.text(240,320,locale.t('studio'),'caption',430,'#7A6A60');
   const modeCard = (key: string, y: number, icon: string, title: Word, subtitle: string, resume: boolean, action: () => void): void => {
    this.surface(key === 'orders' ? 'order-card' : 'journal-card',240,y,416,144);
    this.icon(icon,82,y,46,key === 'orders' ? '▤' : '▷');

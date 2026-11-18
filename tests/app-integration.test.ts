@@ -23,7 +23,7 @@ describe('DOM application lifecycle',()=>{
  it('settings pauses game; live RU/EN does not reload or reset the board',async()=>{
   html();app=mountApplication(new WebPlatform('en'),async()=>{});await settle();start();app.game.place(0,0,0);const score=app.game.score;
   document.querySelector<HTMLButtonElement>('.appbar button')!.click();expect(app.gate.has('manual')).toBe(true);app.game.place(1,5,5);expect(app.game.score).toBe(score);
-  const ru=Array.from(document.querySelectorAll<HTMLButtonElement>('.modal button')).find(b=>b.textContent==='RU')!;ru.click();expect(document.documentElement.lang).toBe('ru');expect(document.title).toBe('Мастерская блоков');expect(app.game.score).toBe(score);
+  const ru=Array.from(document.querySelectorAll<HTMLButtonElement>('.modal button')).find(b=>b.textContent==='RU')!;ru.click();expect(document.documentElement.lang).toBe('ru');expect(document.title).toBe('Мастерская линий: Блок пазл');expect(app.game.score).toBe(score);
   document.querySelector<HTMLButtonElement>('.modal [data-word="close"]')!.click();expect(app.gate.paused).toBe(false);
  });
  it('opens Settings from the main menu without immediately toggling locale', async()=>{
