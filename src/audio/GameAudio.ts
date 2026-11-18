@@ -6,7 +6,7 @@ export function gameAudio(manager: AudioManager, onMute: (muted: boolean) => voi
  onMute(muted);
  return {
   pickup: () => manager.playEffect('pickup'), place: () => manager.playEffect('place'), reject: () => manager.playEffect('reject'),
-  clear: () => manager.playEffect('clear'), combo: () => manager.playEffect('combo'), perfect: () => manager.playEffect('perfect'), gameOver: () => manager.playEffect('gameover'),
+  clear: () => manager.playEffect('clear'), combo: () => manager.playEffect('clear'), perfect: () => manager.playEffect('clear'), gameOver: () => manager.playEffect('reject'),
   unlock: () => manager.unlock(), isMuted: () => muted,
   setMuted: (value) => { muted = value; saveMute(value); onMute(value); }
  };

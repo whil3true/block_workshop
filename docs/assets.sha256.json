@@ -1,13 +1,12 @@
 {
-  "THIRD_PARTY_NOTICES.txt": "724879b6b731670e65905b0643322cbcc78110baeec927849fa9760d9ed22534",
-  "audio/clear.wav": "ad7b6f23bffa91cc69efaa9bbd01546f978b5fa4b0cab270e7c208fdad42d6d7",
-  "audio/combo.wav": "91f2cdd53417b34c4f6f359ac45049cfe2db526f134046f245c28a16793aaf9c",
-  "audio/gameover.wav": "304d66dc7e4f68db89d4787bd9a0aff0aa2c9ecbc6a0f1f93dd60c7e641d2874",
-  "audio/perfect.wav": "07fc5388af962c2fab418a2095498e8b48bab3d7f397faea22c53595070dce7a",
-  "audio/pickup.wav": "404309d66e57c864e00c1568cceb0c50613cc7682ebf6dfce8f900b9bddcdab3",
-  "audio/place.wav": "928f0b91c7468ca0e57f51d1b6fe17a674bd056b786a9f57d45bdcb3ff633492",
-  "audio/reject.wav": "1a2951805c72b0627816a7df54fe7a3155dc8da8f2d7a6b5aef4772b2ec81719",
-  "audio/workshop.wav": "b6e04a9d6807f7f63641c63926b502116541fc5db48c9145916e3e281f292dee",
+  "THIRD_PARTY_NOTICES.txt": "ec9b348157e74bc36f7753e965d08a33a3f46ebb73d36bfb3ea95091fe574bb4",
+  "audio/bong_001.ogg": "d21d0f0b782445db579d11e2506b24cd1ac9d664ee33aeaf807761aa7b6fd710",
+  "audio/click_003.ogg": "2fa929138bc3a0f432696588f66eac94b8f6d463905ec8808c6461ce4b054292",
+  "audio/drop_002.ogg": "4ac4d1cef7e936965cbf795852ca2020300b9e2ba7daa59f2bf4f1f7bf416218",
+  "audio/drop_003.ogg": "43d086d50f90493a98cd2e09aa6dbf150d164f1578e1ec768d21cb185571ad87",
+  "audio/drop_004.ogg": "10738707f9300f9b963ceba46d5da2ed4a221faf7d39484a643c2d3bc151c5f2",
+  "audio/forget_me_not_in_f_major_looped.ogg": "2b9b9fc512c34d52b999ed1fd7e01f960f830f3defc5d2241f6e02f8be81ef77",
+  "audio/jingles_PIZZI10.ogg": "baf50beffc4cc2dbb92c9d596a22732a8b5249c7648b681c0df6d0af6c561478",
   "licenses/10block-MIT.txt": "4d013a53410d06a061d3b8839eeb393f88849466c742e171dbe95691a5223ca9",
   "licenses/Vite-LICENSE.txt": "c6bfec08b0e78a198c5ec0c579e699d2843fd1bf81243f648620731d03f43593"
 }

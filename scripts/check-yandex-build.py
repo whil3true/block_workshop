@@ -14,7 +14,9 @@ from urllib.parse import unquote, urlsplit
 import zipfile
 
 MAX_BYTES = 100_000_000  # Conservative decimal 100 MB, unpacked.
-AUDIO = ('pickup', 'place', 'reject', 'clear', 'combo', 'perfect', 'gameover', 'workshop')
+ASSET_HASHES = json.loads((Path(__file__).resolve().parents[1] / 'docs/assets.sha256.json').read_text())
+AUDIO = {path: digest for path, digest in ASSET_HASHES.items() if path.startswith('audio/')}
+AUDIO_SUFFIXES = {'.ogg', '.oga', '.wav', '.mp3', '.m4a', '.flac', '.aac', '.opus', '.weba'}
 BAD_DIRS = {'src', 'test', 'tests', 'node_modules', 'scripts', 'test-results', 'blob-report', 'coverage'}
 BAD_SUFFIXES = {'.ts', '.tsx', '.mts', '.cts', '.map', '.py', '.sh', '.bat', '.ps1', '.md', '.yaml', '.yml', '.zip', '.lock'}
 ASSET_LITERAL = re.compile(r'''["'`]((?:\./|/)?(?:public/)?(?:assets|audio|fonts)/[^"'`\s${}]+\.[a-zA-Z0-9]+(?:[?#][^"'`\s${}]*)?)["'`]''')
@@ -138,10 +140,13 @@ def validate(source, compare=None):
     require(entry_scripts, 'index.html does not load the production JavaScript entry')
     require(re.search(r'''["']/sdk\.js["']''', combined_js) and 'YaGames' in combined_js, 'Official SDK bootstrap /sdk.js is missing from the compiled JavaScript')
     # These project audio URLs are assembled dynamically by the runtime.
-    for sound in AUDIO:
-        path = f'audio/{sound}.wav'
+    for path, digest in AUDIO.items():
         local(path, 'index.html', True)
-        require(files[path][:4] == b'RIFF' and files[path][8:12] == b'WAVE', f'Invalid WAV: {path}')
+        require(files[path].startswith(b'OggS'), f'Invalid OGG: {path}')
+        require(hashlib.sha256(files[path]).hexdigest() == digest, f'Audio asset hash mismatch: {path}')
+    extra_audio = sorted(path for path in files if path not in AUDIO and
+                         (path.startswith('audio/') or Path(path).suffix.lower() in AUDIO_SUFFIXES))
+    require(not extra_audio, f'Unexpected audio: {", ".join(extra_audio)}')
 
     manifest_name = 'assets/cozy-mosaic/asset-manifest.json'
     require(manifest_name in files, 'Production raster manifest is missing')

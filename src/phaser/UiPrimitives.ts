@@ -124,7 +124,7 @@ const createButton = (
     if (!disabled) {
       armed = true;
       render("pressed");
-      playAudioEffect("pickup");
+      playAudioEffect("click");
     }
   });
   container.on("pointerup", () => {

@@ -47,7 +47,7 @@ test('raster surfaces render in Canvas fallback and frame times stay bounded wit
 
 test('relative build resolves fonts, art and full-viewport paper beneath a Pages subpath',async({page},info)=>{
  const prefix='/block_workshop/', root=join(process.cwd(),'dist');
- const mime:Record<string,string>={'.html':'text/html','.js':'text/javascript','.css':'text/css','.woff2':'font/woff2','.png':'image/png','.webp':'image/webp','.wav':'audio/wav'};
+ const mime:Record<string,string>={'.html':'text/html','.js':'text/javascript','.css':'text/css','.woff2':'font/woff2','.png':'image/png','.webp':'image/webp','.ogg':'audio/ogg'};
  const server=createServer(async(req,res)=>{
   const path=new URL(req.url??'/', 'http://localhost').pathname;
   if(!path.startsWith(prefix)){res.writeHead(404);res.end();return;}
