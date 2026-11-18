@@ -1,7 +1,15 @@
 export type SupportedLocale = "ru" | "en";
 export const DEFAULT_LOCALE: SupportedLocale = "ru";
+
+const gameTitle = (brand: string, genre: string) => ({
+ title: `${brand}: ${genre}`,
+ titleBrand: `${brand}:`,
+ titleGenre: genre,
+});
+
 export const words = {
  en: {
+  ...gameTitle('Line Workshop', 'Block Puzzle'),
   shortRules: 'Fill rows or columns to clear them. Place all three pieces to receive a new tray.',
   back: 'Back', orders: 'Orders', classic: 'Classic', studio: 'Paper mosaic studio', chapter: 'Chapter', firstLines: 'First lines', order: 'Order',
   completed: 'Completed', available: 'Open', locked: 'Locked', future: 'More orders are in the making', soon: 'Coming later',
@@ -11,7 +19,7 @@ export const words = {
   rowGoal: 'Clear a row', columnGoal: 'Clear a column', targetRow: 'Clear row', targetColumn: 'Clear column', crossGoal: 'Row + column in one move',
   retryConfirm: 'Restart this order with the same board and pieces? Your completed orders stay saved.', leaveOrderTitle: 'Leave this order?', leaveOrderWarning: 'Your unfinished progress will be lost. Next time, this order starts over.', stay: 'Keep playing', leaveOrderAction: 'Leave order', moves: 'Moves', step: 'Step',
   intro: 'Fill a row or column.\nMake a little room for the next idea.',
-  title: 'Block Workshop', score: 'Score', best: 'Best', settings: 'Settings', menu: 'Menu', play: 'Play', resume: 'Continue',
+  score: 'Score', best: 'Best', settings: 'Settings', menu: 'Menu', play: 'Play', resume: 'Continue',
   newGame: 'New game', gameOver: 'No more moves', reward: 'New tray · video', rewardConfirm: 'Watch a video to replace all three pieces? Once per game.',
   rewardUnavailable: 'The video did not grant a reward. Your tray is unchanged.', standalone: 'Standalone preview · advertisements unavailable',
   music: 'Music', effects: 'Effects', mute: 'Mute', unmute: 'Unmute', language: 'Language', close: 'Close',
@@ -20,6 +28,7 @@ export const words = {
   paused: 'Paused', loading: 'Loading…', error: 'Platform unavailable. Reload to retry.', combo: 'COMBO', rulesLink: 'How to play',
  },
  ru: {
+  ...gameTitle('Мастерская линий', 'Блок пазл'),
   shortRules: 'Заполняй строки и столбцы. Размести все три фигуры — появится новый набор.',
   back: 'Назад', orders: 'Заказы', classic: 'Классика', studio: 'Студия бумажной мозаики', chapter: 'Глава', firstLines: 'Первые линии', order: 'Заказ',
   completed: 'Готово', available: 'Открыт', locked: 'Закрыт', future: 'Новые заказы ещё в работе', soon: 'Скоро',
@@ -29,7 +38,7 @@ export const words = {
   rowGoal: 'Очисти строку', columnGoal: 'Очисти столбец', targetRow: 'Очисти строку', targetColumn: 'Очисти столбец', crossGoal: 'Строка и столбец за ход',
   retryConfirm: 'Начать этот заказ заново с тем же полем и фигурами? Выполненные заказы сохранятся.', leaveOrderTitle: 'Выйти из заказа?', leaveOrderWarning: 'Незавершённый прогресс будет потерян. При повторном входе заказ начнётся сначала.', stay: 'Остаться', leaveOrderAction: 'Выйти', moves: 'Ходы', step: 'Этап',
   intro: 'Собирай линии. Освобождай место\nдля следующей маленькой идеи.',
-  title: 'Мастерская блоков', score: 'Счёт', best: 'Рекорд', settings: 'Настройки', menu: 'Меню', play: 'Играть', resume: 'Продолжить',
+  score: 'Счёт', best: 'Рекорд', settings: 'Настройки', menu: 'Меню', play: 'Играть', resume: 'Продолжить',
   newGame: 'Новая игра', gameOver: 'Нет доступных ходов', reward: 'Набор · видео', rewardConfirm: 'Посмотреть видео и заменить все три фигуры? Один раз за партию.',
   rewardUnavailable: 'Видео не выдало награду. Ваш набор сохранён.', standalone: 'Предпросмотр · реклама недоступна',
   music: 'Музыка', effects: 'Эффекты', mute: 'Без звука', unmute: 'Включить звук', language: 'Язык', close: 'Закрыть',

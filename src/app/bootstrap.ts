@@ -47,7 +47,13 @@ export function mountApplication(platform: PlatformService, inputGuard = new Sdk
  const focus = (): void => gate.set('focus', false);
  window.addEventListener('blur', blur); window.addEventListener('focus', focus);
  const locale = new LocaleRuntime(platform.id === 'yandex' ? platform.locale : undefined);
- const translate = (): void => { document.documentElement.lang = locale.locale; document.title = locale.t('title'); scene?.invalidate(); };
+ const translate = (canvas?: HTMLCanvasElement): void => {
+  const title = locale.t('title');
+  document.documentElement.lang = locale.locale;
+  document.title = title;
+  canvas?.setAttribute('aria-label', title);
+  scene?.invalidate();
+ };
  translate();
  const manager = new AudioManager(new HtmlAudioOutput(), new WebAudioSettingsStore());
  configureAudioRuntime(manager);
@@ -71,7 +77,7 @@ export function mountApplication(platform: PlatformService, inputGuard = new Sdk
   scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.NO_CENTER, expandParent: false,
    width: LOGICAL_GAME_WIDTH * density, height: LOGICAL_GAME_HEIGHT * density },
  });
- const detachLocale = locale.subscribe(translate);
+ const detachLocale = locale.subscribe(() => translate(game.canvas));
  const detachGate = gate.subscribe(() => {
   inputGuard.setBlocked(gate.has('sdk') || gate.has('browser') || gate.has('focus') || gate.has('ad'));
   manager.setAdActive(shouldSuspendAudio(gate));
