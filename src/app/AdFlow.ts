@@ -27,9 +27,9 @@ export class AdFlow<T extends RewardOffer> {
   let shown = false;
   try {
    try { if (showAd) shown = await this.deps.interstitial.tryShow(() => { this.deps.gate.set('ad', true); this.deps.cover(true); }); } catch { /* Continue on error/no-fill. */ }
-   this.deps.gate.set('ad', false);
    if (this.disposed) return false;
    destination();
+   // An opened ad owns the cover and audio pause until the destination renders.
    await this.deps.afterFrame();
    return shown;
   } finally {

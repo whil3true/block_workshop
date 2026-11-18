@@ -2,6 +2,7 @@ import { describe,it,expect,vi,afterEach } from 'vitest';
 import { AudioManager, type AudioOutput } from '../src/audio/AudioManager';
 import { AUDIO_EFFECTS, AUDIO_MUSIC } from '../src/audio/AudioAssetManifest';
 import { shouldSuspendAudio } from '../src/app/AudioPausePolicy';
+import { AdFlow } from '../src/app/AdFlow';
 import { PauseGate } from '../src/app/PauseGate';
 import { createAudioSettings, parseAudioSettings } from '../src/audio/AudioSettings';
 import { WebAudioSettingsStore } from '../src/platform/WebAudioSettingsStore';
@@ -9,6 +10,7 @@ import { LocaleRuntime } from '../src/app/LocaleRuntime';
 import { attachBrowserAudioLifecycle } from '../src/audio/BrowserAudioLifecycle';
 import { HtmlAudioOutput } from '../src/audio/HtmlAudioOutput';
 import { gameAudio } from '../src/audio/GameAudio';
+import { WebPlatform } from '../src/platform/WebPlatform';
 function setup(){
  let now=0;
  const output:AudioOutput={onUserGesture:vi.fn(),setEffectsActive:vi.fn(),playEffect:vi.fn(),startMusic:vi.fn(),setMusicVolume:vi.fn(),pauseMusic:vi.fn(),resumeMusic:vi.fn(),stopMusic:vi.fn()};
@@ -58,7 +60,7 @@ describe('settings and language persistence',()=>{
  it('storage unavailable keeps in-memory language and settings',()=>{vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw Error('denied');});vi.spyOn(Storage.prototype,'getItem').mockImplementation(()=>{throw Error('denied');});const locale=new LocaleRuntime('en');expect(()=>locale.set('ru')).not.toThrow();expect(locale.locale).toBe('ru');expect(()=>new WebAudioSettingsStore().save(createAudioSettings(.1,.2))).not.toThrow();});
 });
 describe('Android media-session mechanism (mock, not hardware)',()=>{
- it('loops one music element, releases its source in the background and resumes at the saved position',()=>{
+ it('keeps the same music element through navigation and releases it only when the page backgrounds',async()=>{
   const instances:FakeAudio[]=[];
   class FakeAudio {
    src:string;currentTime=0;paused=true;readyState=1;volume=1;preload='';loop=false;plays=0;
@@ -70,14 +72,22 @@ describe('Android media-session mechanism (mock, not hardware)',()=>{
   const media={playbackState:'playing',metadata:{title:'test'}};Object.defineProperty(navigator,'mediaSession',{configurable:true,value:media});
   const manager=new AudioManager(new HtmlAudioOutput(),{load:()=>createAudioSettings(.4,.65),save:()=>{}});manager.unlock();
   const first=instances.find(a=>a.src===AUDIO_MUSIC&&a.plays>0)!;
+  const gate=new PauseGate();
+  const detach=gate.subscribe(()=>manager.setAdActive(shouldSuspendAudio(gate)));
+  const flow=new AdFlow({gate,platform:new WebPlatform(),interstitial:{tryShow:async()=>false},
+   cover:()=>{},afterFrame:async()=>{},restart:()=>{},applyReward:()=>false});
   expect(first.loop).toBe(true);
-  first.currentTime=12.5;manager.setPageVisible(false);
+  first.currentTime=12.5;
+  await flow.transition(()=>gate.set('startup',true));
+  expect(instances.filter(a=>a.plays>0)).toEqual([first]);
+  expect(first).toMatchObject({src:AUDIO_MUSIC,currentTime:12.5,paused:false,plays:1});
+  gate.set('browser',true);
   expect(first.src).toBe('');expect(first.paused).toBe(true);expect(media.playbackState).toBe('none');expect(media.metadata).toBeNull();
-  manager.setPageVisible(true);
+  gate.set('browser',false);
   const second=instances.find(a=>a!==first&&a.src===AUDIO_MUSIC)!;
   expect(second.loop).toBe(true);expect(second.currentTime).toBe(12.5);expect(first.plays).toBe(1);
   expect(instances.filter(a=>!a.paused)).toEqual([second]);
-  manager.dispose();
+  detach();manager.dispose();
  });
 });
 
@@ -101,7 +111,7 @@ describe('audio ownership during Phaser settings dialogs',()=>{
   expect(s.output.resumeMusic).not.toHaveBeenCalled();
   stop();s.manager.dispose();
  });
- it.each(['sdk','browser','ad','transition'] as const)('%s still silences audio and resumes inside an open settings dialog',reason=>{
+ it.each(['sdk','browser','ad','focus','input'] as const)('%s still silences audio and resumes inside an open settings dialog',reason=>{
   const s=setup(),gate=new PauseGate();
   const stop=gate.subscribe(()=>s.manager.setAdActive(shouldSuspendAudio(gate)));
   s.manager.unlock();

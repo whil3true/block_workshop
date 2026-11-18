@@ -75,7 +75,7 @@ describe('Classic completed drop → SDK transaction → independent pause relea
     expect(f.request).toHaveBeenCalledOnce();
     expect(f.model.revision).toBe(1);
     expect(f.gate.has('transition')).toBe(true);
-    expect(f.output.pauseMusic).toHaveBeenCalledOnce();
+    expect(f.output.pauseMusic).not.toHaveBeenCalled();
     f.model.place(1, 0, 1); f.releaseAgain();
     expect(await f.flow.intermission()).toBe(false);
     expect(f.request).toHaveBeenCalledOnce();
@@ -83,6 +83,7 @@ describe('Classic completed drop → SDK transaction → independent pause relea
     if (kind !== 'no-fill' && kind !== 'error-before-open') {
      f.full().onOpen?.(); f.full().onOpen?.(); f.event('game_api_pause');
      expect(f.cover.mock.calls.filter(([visible]) => visible)).toHaveLength(1);
+     expect(f.output.pauseMusic).toHaveBeenCalledOnce();
     }
     if (kind === 'background') window.dispatchEvent(new Event('pagehide'));
     if (kind === 'resume-first') f.event('game_api_resume');
@@ -104,7 +105,10 @@ describe('Classic completed drop → SDK transaction → independent pause relea
      window.dispatchEvent(new Event('pageshow'));
     }
     expect(f.gate.paused).toBe(false);
-    expect(f.output.resumeMusic).toHaveBeenCalledOnce();
+    if (kind === 'no-fill' || kind === 'error-before-open') {
+     expect(f.output.pauseMusic).not.toHaveBeenCalled();
+     expect(f.output.resumeMusic).not.toHaveBeenCalled();
+    } else expect(f.output.resumeMusic).toHaveBeenCalledOnce();
     // Late/duplicated callbacks cannot replay the drop or re-open the cover.
     f.full().onClose?.(true); f.full().onError?.({}); f.full().onOpen?.(); f.releaseAgain();
     expect(f.gate.paused).toBe(false);

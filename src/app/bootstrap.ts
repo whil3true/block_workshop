@@ -73,8 +73,6 @@ export function mountApplication(platform: PlatformService, inputGuard = new Sdk
  });
  const detachLocale = locale.subscribe(translate);
  const detachGate = gate.subscribe(() => {
-  // A modal pauses gameplay input, not background music or UI SFX.
-  // Only external interruptions (SDK/browser/ad/transition) suspend audio.
   inputGuard.setBlocked(gate.has('sdk') || gate.has('browser') || gate.has('focus') || gate.has('ad'));
   manager.setAdActive(shouldSuspendAudio(gate));
   scene?.onPauseChange(); flow.flushReward();
