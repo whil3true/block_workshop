@@ -83,4 +83,10 @@ test('touch unlock plays one UI click, one looping track, and distinct piece sou
  expect(started[beforeDrag]).toBeGreaterThan(0.15);
  expect(started[beforeDrag + 1]).toBeGreaterThan(0.15);
  expect(music).toHaveLength(1);
+
+ await tap(49, 45); // Classic → main menu without an ad.
+ await expect.poll(async () => (await read()).music).toEqual([
+  { loop: true, paused: false, time: expect.any(Number) },
+ ]);
+ await expect.poll(async () => (await read()).music[0]?.time ?? 0).toBeGreaterThan(music[0]!.time);
 });

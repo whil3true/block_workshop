@@ -76,7 +76,7 @@ export class WorkshopScene extends Phaser.Scene {
   this.input.on('pointerupoutside', this.cancelDrag, this);
   this.input.on('gameout', this.cancelDrag, this);
   this.input.keyboard?.on('keydown-ESC', () => {
-   if (this.externalBlock()) return;
+   if (this.inputBlocked()) return;
    if (this.modal) this.closeModal();
    else if (this.screen === 'play' && this.mode === 'campaign') this.requestCampaignExit('menu');
    else if (this.screen !== 'menu') this.navigate('menu');
@@ -124,7 +124,7 @@ export class WorkshopScene extends Phaser.Scene {
  private tryClassicIntermission(): boolean {
   this.syncClassicClock();
   if (this.disposed || this.screen !== 'play' || this.mode !== 'classic' || this.terminal || this.drag
-   || this.modal || this.externalBlock() || this.services.flow.busy || !this.classicClock.due || !this.services.interstitial.eligible) return false;
+   || this.modal || this.inputBlocked() || this.services.flow.busy || !this.classicClock.due || !this.services.interstitial.eligible) return false;
   // This is a completed drop, never a timer callback. Remove only cosmetic flashes.
   this.effects.removeAll(true);
   void this.services.flow.intermission().then(shown => {
@@ -143,7 +143,10 @@ export class WorkshopScene extends Phaser.Scene {
  }
  private externalBlock(): boolean {
   const gate = this.services.gate;
-  return !this.ready || gate.has('sdk') || gate.has('browser') || gate.has('ad') || gate.has('transition') || gate.has('input') || gate.has('focus');
+  return !this.ready || gate.has('sdk') || gate.has('browser') || gate.has('ad') || gate.has('input') || gate.has('focus');
+ }
+ private inputBlocked(): boolean {
+  return this.externalBlock() || this.services.gate.has('transition');
  }
  private get board(): BoardState { return this.mode === 'campaign' ? this.services.campaign.active!.board : this.services.model.boardState; }
  private get pieces(): readonly (Piece | null)[] {
@@ -169,14 +172,14 @@ export class WorkshopScene extends Phaser.Scene {
  private button(key: string, word: Word | 'RU' | 'EN', x: number, y: number, action: () => void, width = 200, disabled = false, primary = false): void {
   const button = (primary ? createPrimaryButton : createSecondaryButton)(this, this.services.density, {
    x, y, width, height: 56, label: word === 'RU' || word === 'EN' ? word : this.services.locale.t(word),
-   disabled: disabled || this.externalBlock(), onActivate: () => { if (!this.externalBlock()) action(); },
+   disabled: disabled || this.inputBlocked(), onActivate: () => { if (!this.inputBlocked()) action(); },
   });
   button.container.setName(key); this.root.add(button.container);
  }
  private zone(key: string,x: number,y: number,w: number,h: number,action: () => void, disabled = false, canActivate?: () => boolean): void {
   const zone = this.add.zone(x,y,w,h).setName(key);
-  if (!disabled && !this.externalBlock()) zone.setInteractive({useHandCursor:true}).on('pointerdown', () => {
-   if (this.externalBlock() || this.modal || canActivate?.() === false) return;
+  if (!disabled && !this.inputBlocked()) zone.setInteractive({useHandCursor:true}).on('pointerdown', () => {
+   if (this.inputBlocked() || this.modal || canActivate?.() === false) return;
    this.services.audio.unlock();
    playAudioEffect('click');
    action();
@@ -213,7 +216,7 @@ export class WorkshopScene extends Phaser.Scene {
   // Plain window blur cancels the held figure and freezes gameplay without
   // replacing its restored visual state (browser chrome can take focus).
   const gate = this.services.gate;
-  const focusOnly = gate.has('focus') && !gate.has('sdk') && !gate.has('browser') && !gate.has('ad') && !gate.has('transition');
+  const focusOnly = gate.has('focus') && !gate.has('sdk') && !gate.has('browser') && !gate.has('ad');
   if (this.cover || (this.externalBlock() && !focusOnly)) { this.overlay(); this.text(240,400,this.services.locale.t(this.ready ? 'paused' : 'loading'),'screenTitle'); }
   this.effects.setVisible(this.backdrop === null);
   this.services.platform.setGameplayActive(this.screen === 'play' && !this.terminal && !this.services.gate.paused && !this.modal && !this.services.flow.busy && this.ready);
@@ -408,7 +411,7 @@ export class WorkshopScene extends Phaser.Scene {
   this.navigate(destination);
  }
  private navigate(screen: 'menu' | 'journal' | 'play'): void {
-  if (this.externalBlock() || this.modal || this.services.flow.busy) return;
+  if (this.inputBlocked() || this.modal || this.services.flow.busy) return;
   if (this.screen === 'play' && screen !== 'play') {
    void this.services.flow.transition(() => this.commitNavigation(screen));
   } else {
@@ -424,7 +427,7 @@ export class WorkshopScene extends Phaser.Scene {
   this.services.gate.set('startup',screen !== 'play'); this.syncClassicClock(); this.invalidate();
  }
  private openModal(modal: Exclude<Modal,null>): void {
-  if (this.modal || this.externalBlock() || this.services.flow.busy) return;
+  if (this.modal || this.inputBlocked() || this.services.flow.busy) return;
   if (modal === 'reward') {
    if (this.mode !== 'classic' || this.services.platform.id !== 'yandex') return;
    this.offering=this.services.model.prepareReward(); if (!this.offering) return;
@@ -505,7 +508,7 @@ export class WorkshopScene extends Phaser.Scene {
   for (const [r,c] of piece.cells) this.tile(target,graphics,piece.family,x+c*cell,y+r*cell,cell);
  }
  private pickup(pointer: Phaser.Input.Pointer,slot: number,piece: Piece): void {
-  if (this.screen !== 'play' || this.drag || this.services.gate.paused || this.terminal || this.externalBlock()) return;
+  if (this.screen !== 'play' || this.drag || this.services.gate.paused || this.terminal || this.inputBlocked()) return;
   this.drag={pointerId:pointer.id,slot,piece,lift:pointer.wasTouch ? 40 : 0,x:0,y:0};
   this.trayFigures[slot]?.setVisible(false); this.services.audio.pickup(); this.move(pointer);
  }
